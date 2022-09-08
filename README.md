@@ -1,4 +1,4 @@
-# CDP - [A
+# CDP - Montana State Legislature
 
 [![Infrastructure Deployment Status](https://github.com/OpenMontana/montana-legislature-council-data-project/workflows/Infrastructure/badge.svg)](https://github.com/OpenMontana/montana-legislature-council-data-project/actions?query=workflow%3A%22Infrastructure%22)
 [![Event Processing Pipeline](https://github.com/OpenMontana/montana-legislature-council-data-project/workflows/Event%20Gather/badge.svg)](https://github.com/OpenMontana/montana-legislature-council-data-project/actions?query=workflow%3A%22Event+Gather%22)
@@ -16,7 +16,7 @@ For more information about Council Data Project, please visit [our website](http
 
 ## Instance Information
 
-This repo serves the municipality: **[A**
+This repo serves the municipality: **Montana State Legislature**
 
 ### Python Access
 

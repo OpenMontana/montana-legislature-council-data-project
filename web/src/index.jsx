@@ -12,7 +12,7 @@ const config = {
         settings: {},
     },
     municipality: {
-        name: "[A",
+        name: "Montana State Legislature",
         timeZone: "America/Missoula",
         footerLinksSections: [],
     },

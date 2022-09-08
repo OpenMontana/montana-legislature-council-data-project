@@ -1,5 +1,5 @@
 default_context:
-    municipality: "[A"
+    municipality: "Montana State Legislature"
     iana_timezone: "America/Missoula"
     governing_body_type: "other"
     municipality_slug: "montana-legislature"

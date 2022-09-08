@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Top-level package for [A
+Top-level package for Montana State Legislature
 CDP Instance backend.
 """
 
