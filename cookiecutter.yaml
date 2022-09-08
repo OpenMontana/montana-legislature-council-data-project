@@ -11,3 +11,5 @@ default_context:
     hosting_github_url: "https://github.com/OpenMontana/montana-legislature-council-data-project"
     hosting_web_app_address: "https://OpenMontana.github.io/montana-legislature-council-data-project"
     firestore_region: "us-west1"
+    event_gather_timedelta_lookback_days: 2
+    event_gather_cron: "26 0,6,12,18 * * *"
