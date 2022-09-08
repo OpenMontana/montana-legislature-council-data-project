@@ -1,0 +1,13 @@
+default_context:
+    municipality: "[A"
+    iana_timezone: "America/Missoula"
+    governing_body_type: "other"
+    municipality_slug: "montana-legislature"
+    python_municipality_slug: "montana_legislature"
+    infrastructure_slug: "cdp-montana-legislature"
+    maintainer_or_org_full_name: "Open Montana"
+    hosting_github_username_or_org: "OpenMontana"
+    hosting_github_repo_name: "montana-legislature-council-data-project"
+    hosting_github_url: "https://github.com/OpenMontana/montana-legislature-council-data-project"
+    hosting_web_app_address: "https://OpenMontana.github.io/montana-legislature-council-data-project"
+    firestore_region: "us-west1"
