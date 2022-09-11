@@ -65,6 +65,7 @@ def get_events(
 
     print(f"Found key bills: {key_bills_data}")
 
+    event_data = []
     # Go to each LAWS bill URL and find bill actions that have associated recordings.
     for bill_data in key_bills_data:
         laws_bill_html = requests.get(bill_data['laws_bill_url']).text
@@ -74,23 +75,32 @@ def get_events(
             parsed_bill_row = BeautifulSoup(bill_row, 'html.parser')
             all_links = parsed_bill_row.find_all('td')[-1].find_all('a')
             sliq_links = [ link for link in all_links if "sliq" in link['href'] ]
-            # TODO: Prefer video over audio if both exist
-            sliq_link = sliq_links[0]['href']
 
-            # The `external_source_id` will be used by the Capitol Tracker frontend to correlate the bill to the CDP event ID.
-            bill_data['external_source_id'] = sliq_link
+            hearing_data = {}
+            last_link_added = False
+            # Of the recordings available for this action, prefer using the video over the audio if video exists. If it doesn't exist, use the audio.
+            for link in sliq_links:
+                sliq_link = link['href']
+                sliq_html = requests.get(sliq_link).text
 
-            # Now, go to the Sliq page and save off additional metadata about the recording.
-            sliq_html = requests.get(sliq_link).text
+                media_info = re.search('downloadMediaUrls = (.*);', sliq_html).groups()[0]
+                parsed_media_info = json.loads(media_info)[0]
+                is_video = parsed_media_info['AudioOnly'] == False
 
-            media_urls_text = re.search('downloadMediaUrls = (.*);', sliq_html).groups()[0]
-            media_urls_json = json.loads(media_urls_text)
-            bill_data['mp4_recording_url'] = media_urls_json[0]['Url']
+                # TODO: Get more metadata from here
+                event_info_text = re.search('EventInfo:(.*),', sliq_html).groups()[0]
+                event_info_json = json.loads(event_info_text)
 
-            event_info_text = re.search('EventInfo:(.*),', sliq_html).groups()[0]
-            event_info_json = json.loads(event_info_text)
+                if not last_link_added or is_video:
+                    hearing_data['bill_title'] = bill_data['title']
+                    hearing_data['mp4_recording_url'] = parsed_media_info['Url']
+                    # The `external_source_id` will be used by the Capitol Tracker frontend to correlate the bill to the CDP event ID.
+                    hearing_data['external_source_id'] = sliq_link
+                    last_link_added = True
+            
+            event_data.append(hearing_data)
 
-    print(key_bills_data)
+    print(event_data)
 
     # TODO grab timestamp info and set to new metadata for Chris' CDP backend change to handle subset of video
     
