@@ -59,7 +59,7 @@ def get_events(
         bill_data = {}
         if bill_type_number in key_bill_names:
             bill_data['bill_type_number'] = bill_type_number
-            bill_data['title'] = bill_row.find_all('td')[-1].text
+            bill_data['description'] = bill_row.find_all('td')[-1].text
             bill_data['laws_bill_url'] = "http://laws.leg.mt.gov/legprd/" + bill_link['href']
             key_bills_data.append(bill_data)
 
@@ -73,7 +73,8 @@ def get_events(
         for bill_row in bill_rows_with_recordings:
             # TODO: Use from_dt and to_dt to filter bill actions within date range
             parsed_bill_row = BeautifulSoup(bill_row, 'html.parser')
-            all_links = parsed_bill_row.find_all('td')[-1].find_all('a')
+            bill_cells = parsed_bill_row.find_all('td')
+            all_links = bill_cells[-1].find_all('a')
             sliq_links = [ link for link in all_links if "sliq" in link['href'] ]
 
             hearing_data = {}
@@ -90,9 +91,15 @@ def get_events(
                 # TODO: Get more metadata from here
                 event_info_text = re.search('EventInfo:(.*),', sliq_html).groups()[0]
                 event_info_json = json.loads(event_info_text)
+                # print(event_info_json)
 
                 if not last_link_added or is_video:
-                    hearing_data['bill_title'] = bill_data['title']
+                    bill_action = bill_cells[0].text
+                    title = bill_data['bill_type_number'] + ' - ' + bill_action
+                    committee = bill_cells[-1].text.strip()
+                    if not committee == '':
+                        title += ' - ' + committee
+                    hearing_data['title'] = title
                     hearing_data['mp4_recording_url'] = parsed_media_info['Url']
                     # The `external_source_id` will be used by the Capitol Tracker frontend to correlate the bill to the CDP event ID.
                     hearing_data['external_source_id'] = sliq_link
