@@ -10,3 +10,6 @@ update-from-cookiecutter:
     --no-input \
     --overwrite-if-exists \
     --output-dir ..
+
+clean:
+  rm -rf **/build **/*.egg-info dist
