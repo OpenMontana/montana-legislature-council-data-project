@@ -40,56 +40,59 @@ def get_events(
     from GitHub Actions UI.
     """
 
-    # TODO Read key bills from config
-    key_bills = ["HB 1"]
+    # TODO: Read key bills from config or Capitol Tracker JSON
+    key_bill_names = ["HB 1"]
     
-    bills_table_url = "http://laws.leg.mt.gov/legprd/LAW0217W$BAIV.return_all_bills?P_SESS=20211"
-    print(f"Requesting {bills_table_url}...")
-    bills_html = requests.get(bills_table_url).text
+    # Start at the big table of all bills from the 2021 session.
+    bills_url_2021 = "http://laws.leg.mt.gov/legprd/LAW0217W$BAIV.return_all_bills?P_SESS=20211"
+    bills_html = requests.get(bills_url_2021).text
+    parsed_bills_html = BeautifulSoup(bills_html, 'html.parser')
+    bills_table = parsed_bills_html.find_all('table')[1]
+    bills_table_rows = bills_table.find_all('tr')
+    print(f"Found table with {len(bills_table_rows) - 1} rows.")
 
-    print(f"Parsing HTML")
-    soup = BeautifulSoup(bills_html, 'html.parser')
-    bills_table = soup.find_all('table')[1]
-    bills_table_data = bills_table.find_all('tr')
-    print(f"Found table with {len(bills_table_data) - 1} rows.")
+    # Of all the bills, narrow down to only the key bills and store off the LAWS bill URL for the next step.
+    key_bills_data = []
+    for bill_row in bills_table_rows[1:]:
+        bill_link = bill_row.find_all('a')[0]
+        bill_type_number = bill_link.text
+        bill_data = {}
+        if bill_type_number in key_bill_names:
+            bill_data['bill_type_number'] = bill_type_number
+            bill_data['title'] = bill_row.find_all('td')[-1].text
+            bill_data['laws_bill_url'] = "http://laws.leg.mt.gov/legprd/" + bill_link['href']
+            key_bills_data.append(bill_data)
 
-    #only key bills
-    filtered_bills = []
-    for bill_row in bills_table_data[1:]:
-        bill_anchor = bill_row.find_all('a')[0]
-        bill_name = bill_anchor.text
-        bill = {}
-        if bill_name in key_bills:
-            bill_data = bill_row.find_all('td')
-            bill['bill_type_number'] = bill_name
-            bill['actions_url'] = "http://laws.leg.mt.gov/legprd/" + bill_anchor['href']
-            bill['title'] = bill_data[len(bill_data) - 1].text
-            filtered_bills.append(bill)
+    print(f"Found key bills: {key_bills_data}")
 
-    print(f"Found key bills: {filtered_bills}")
-
-    for fbill in filtered_bills:
-        print(fbill['actions_url'])
-        bill_actions_html = requests.get(fbill['actions_url']).text
-        bill_rows_with_recordings = re.findall('.*sliq.*', bill_actions_html)
-        for action_row in bill_rows_with_recordings:
-            # TODO use from_dt and to_dt to filter bill actions
-            soup = BeautifulSoup(action_row, 'html.parser')
-            recording_links = soup.find_all('td')[-1].find_all('a')
-            sliq_links = [ link for link in recording_links if "sliq" in link['href'] ]
+    # Go to each LAWS bill URL and find bill actions that have associated recordings.
+    for bill_data in key_bills_data:
+        laws_bill_html = requests.get(bill_data['laws_bill_url']).text
+        bill_rows_with_recordings = re.findall('.*sliq.*', laws_bill_html)
+        for bill_row in bill_rows_with_recordings:
+            # TODO: Use from_dt and to_dt to filter bill actions within date range
+            parsed_bill_row = BeautifulSoup(bill_row, 'html.parser')
+            all_links = parsed_bill_row.find_all('td')[-1].find_all('a')
+            sliq_links = [ link for link in all_links if "sliq" in link['href'] ]
             # TODO: Prefer video over audio if both exist
-            recording_link = sliq_links[0]['href']
-            print(f"recording_link={recording_link}")
-            fbill['external_source_id'] = recording_link
-            sliq_html = requests.get(recording_link).text
+            sliq_link = sliq_links[0]['href']
+
+            # The `external_source_id` will be used by the Capitol Tracker frontend to correlate the bill to the CDP event ID.
+            bill_data['external_source_id'] = sliq_link
+
+            # Now, go to the Sliq page and save off additional metadata about the recording.
+            sliq_html = requests.get(sliq_link).text
+
             media_urls_text = re.search('downloadMediaUrls = (.*);', sliq_html).groups()[0]
             media_urls_json = json.loads(media_urls_text)
-            fbill['mp4_recording_url'] = media_urls_json 
+            bill_data['mp4_recording_url'] = media_urls_json[0]['Url']
 
             event_info_text = re.search('EventInfo:(.*),', sliq_html).groups()[0]
             event_info_json = json.loads(event_info_text)
 
-            # TODO grab timestamp info and set to new metadata for Chris' CDP backend change to handle subset of video
+    print(key_bills_data)
+
+    # TODO grab timestamp info and set to new metadata for Chris' CDP backend change to handle subset of video
     
     # TODO create event ingestion model
 
