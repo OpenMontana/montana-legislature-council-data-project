@@ -60,9 +60,7 @@ if __name__ == "__main__":
 
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Scape events from MT Legislature"
-    )
+    parser = argparse.ArgumentParser(description="Scape events from MT Legislature")
     parser.add_argument(
         "-f",
         "--from_dt",
