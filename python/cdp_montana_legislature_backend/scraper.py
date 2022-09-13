@@ -10,9 +10,7 @@ from cdp_backend.pipeline.ingestion_models import EventIngestionModel
 # region logging
 
 log = logging.getLogger("cdp_montana_legislature_scraper")
-log.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
 ch.setFormatter(
     logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 )
@@ -57,6 +55,8 @@ def get_events(
 
 
 if __name__ == "__main__":
+
+    log.setLevel(logging.DEBUG)
 
     import argparse
 
