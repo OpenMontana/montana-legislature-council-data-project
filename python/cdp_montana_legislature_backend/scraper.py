@@ -10,7 +10,9 @@ import re
 import json
 
 from urllib.parse import urlparse, parse_qs
+from cdp_backend.pipeline.ingestion_models import Body
 from cdp_backend.pipeline.ingestion_models import EventIngestionModel
+from cdp_backend.pipeline.ingestion_models import Session
 
 # region logging
 
@@ -112,7 +114,7 @@ def get_events(
                     if not committee == '':
                         title += ' - ' + committee
                     hearing_data['title'] = title
-                    hearing_data['mp4_recording_url'] = parsed_media_info['Url']
+                    hearing_data['video_uri'] = parsed_media_info['Url']
                     # The `external_source_id` will be used by the Capitol Tracker frontend to correlate the bill to
                     # the CDP event ID.
                     hearing_data['external_source_id'] = sliq_link
@@ -138,10 +140,25 @@ def get_events(
                     last_link_added = True
 
             event_data.append(hearing_data)
+    
+    # TODO: Add start_time/end_time video timestamps to this when possible in CDP to transcribe only part of a video.
+    def create_ingestion_model(e):
+        return EventIngestionModel(
+            body=Body(name=e['title']),
+            sessions=[
+                Session(
+                    video_uri=e['video_uri'],
+                    # TODO: Scrape correct datetime for session
+                    session_datetime=datetime.now(),
+                    session_index=0,
+                    external_source_id=e['external_source_id']
+                ),
+            ],
+        )
 
-    # print(event_data)
-    # TODO create event ingestion model
+    events = list(map(create_ingestion_model, event_data))
 
+    # TODO: Return events when we're ready to run the scraper
     return []
 
 
