@@ -9,6 +9,7 @@ import requests
 import re
 import json
 
+from urllib.parse import urlparse, parse_qs
 from cdp_backend.pipeline.ingestion_models import EventIngestionModel
 
 # region logging
@@ -61,12 +62,13 @@ def get_events(
     bills_html = requests.get(bills_url_2021).text
     parsed_bills_html = BeautifulSoup(bills_html, 'html.parser')
     bills_table = parsed_bills_html.find_all('table')[1]
-    bills_table_rows = bills_table.find_all('tr')
+    # Skip the first row because it's headings within a <tr>
+    bills_table_rows = bills_table.find_all('tr')[1:]
     print(f"Found table with {len(bills_table_rows) - 1} rows.")
 
     # Of all the bills, narrow down to only the key bills and store off the LAWS bill URL for the next step.
     key_bills_data = []
-    for bill_row in bills_table_rows[1:]:
+    for bill_row in bills_table_rows:
         bill_link = bill_row.find_all('a')[0]
         bill_type_number = bill_link.text
         bill_data = {}
@@ -82,29 +84,27 @@ def get_events(
     # Go to each LAWS bill URL and find bill actions that have associated recordings.
     for bill_data in key_bills_data:
         laws_bill_html = requests.get(bill_data['laws_bill_url']).text
+        # We use regex search on the full html instead of going through BeautifulSoup due to "invalid" HTML returned by
+        # the server that can't be parsed by BeautifulSoup.
         bill_rows_with_recordings = re.findall('.*sliq.*', laws_bill_html)
         for bill_row in bill_rows_with_recordings:
             # TODO: Use from_dt and to_dt to filter bill actions within date range
             parsed_bill_row = BeautifulSoup(bill_row, 'html.parser')
             bill_cells = parsed_bill_row.find_all('td')
             all_links = bill_cells[-1].find_all('a')
-            sliq_links = [ link for link in all_links if "sliq" in link['href'] ]
+            sliq_links = bill_cells[-1].find_all('a', href=re.compile('sliq'))
 
             hearing_data = {}
             last_link_added = False
-            # Of the recordings available for this action, prefer using the video over the audio if video exists. If it doesn't exist, use the audio.
+            # Of the recordings available for this action, prefer using the video over the audio if video exists.
+            # If it doesn't exist, use the audio.
             for link in sliq_links:
                 sliq_link = link['href']
                 sliq_html = requests.get(sliq_link).text
 
                 media_info = re.search('downloadMediaUrls = (.*);', sliq_html).groups()[0]
                 parsed_media_info = json.loads(media_info)[0]
-                is_video = parsed_media_info['AudioOnly'] == False
-
-                # TODO: Get more metadata from here
-                event_info_text = re.search('EventInfo:(.*),', sliq_html).groups()[0]
-                event_info_json = json.loads(event_info_text)
-                # print(event_info_json)
+                is_video = parsed_media_info['AudioOnly'] is False
 
                 if not last_link_added or is_video:
                     bill_action = bill_cells[0].text
@@ -116,11 +116,30 @@ def get_events(
                     hearing_data['mp4_recording_url'] = parsed_media_info['Url']
                     # The `external_source_id` will be used by the Capitol Tracker frontend to correlate the bill to the CDP event ID.
                     hearing_data['external_source_id'] = sliq_link
+
+                    # Get the start and end time positions for the videos
+                    event_info_text = re.search('AgendaTree:(.*),', sliq_html).groups()[0]
+                    event_info_json = json.loads(event_info_text)
+                    parsed_url = urlparse(sliq_link)
+                    # TODO: Handle if this isn't in the query? Does that always mean that the timestamp hasn't been included yet, thus the video
+                    # shouldn't be scraped on this pass? 
+                    agenda_id = 'A' + parse_qs(parsed_url.query)['agendaId'][0]
+                    agenda_index = [i for i, d in enumerate(event_info_json) if agenda_id in d.values()][0]
+                    start_time = event_info_json[agenda_index]['startTime']
+
+                    end_time = None
+                    if len(event_info_json) > agenda_index + 1:
+                        end_time = event_info_json[agenda_index + 1]['startTime']
+                    
+                    hearing_data['start_time'] = start_time
+                    if not end_time is None:
+                        hearing_data['end_time'] = end_time
+
                     last_link_added = True
             
             event_data.append(hearing_data)
 
-    print(event_data)
+    # print(event_data)
 
     # TODO grab timestamp info and set to new metadata for Chris' CDP backend change to handle subset of video
     
