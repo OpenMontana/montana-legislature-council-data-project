@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import logging
 from datetime import datetime
 from typing import List
 from bs4 import BeautifulSoup
@@ -9,6 +10,17 @@ import re
 import json
 
 from cdp_backend.pipeline.ingestion_models import EventIngestionModel
+
+# region logging
+
+log = logging.getLogger("cdp_montana_legislature_scraper")
+ch = logging.StreamHandler()
+ch.setFormatter(
+    logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+)
+log.addHandler(ch)
+
+# endregion
 
 ###############################################################################
 
@@ -35,10 +47,11 @@ def get_events(
 
     Notes
     -----
-    As the implimenter of the get_events function, you can choose to ignore the from_dt
-    and to_dt parameters. However, they are useful for manually kicking off pipelines
-    from GitHub Actions UI.
+    As the implimenter of the get_events function, you can choose to ignore
+    the from_dt and to_dt parameters. However, they are useful for manually
+    kicking off pipelines from GitHub Actions UI.
     """
+    log.info("Starting MT Legislature Scraper")
 
     # TODO: Read key bills from config or Capitol Tracker JSON
     key_bill_names = ["HB 1"]
@@ -114,3 +127,48 @@ def get_events(
     # TODO create event ingestion model
 
     return []
+
+
+if __name__ == "__main__":
+
+    log.setLevel(logging.DEBUG)
+
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Scape events from MT Legislature")
+    parser.add_argument(
+        "-f",
+        "--from_dt",
+        help=(
+            "An ISO-8601 timestamp used as the minimum timestamp for gathering"
+            " events. If not set datetime.min is used."
+        ),
+    )
+    parser.add_argument(
+        "-t",
+        "--to_dt",
+        help=(
+            "An ISO-8601 timestamp used as the maximum timestamp for gathering"
+            " events. If not set datetime.max is used."
+        ),
+    )
+
+    args = parser.parse_args()
+
+    from_dt = datetime.min
+    to_dt = datetime.max
+
+    from dateutil import parser
+
+    if args.from_dt is not None:
+        log.debug(f"Parsing from_dt={args.from_dt} as datetime")
+        from_dt = parser.isoparse(args.from_dt)
+
+    if args.to_dt is not None:
+        log.debug(f"Parsing to_dt={args.to_dt} as datetime")
+        to_dt = parser.isoparse(args.to_dt)
+
+    log.debug(f"Using arguments: from_dt={from_dt}, to_dt={to_dt}")
+
+    events = get_events(args.from_dt, args.to_dt)
+    log.info(f"Scraped events: {events}")

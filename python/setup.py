@@ -8,7 +8,8 @@ from setuptools import find_packages, setup
 requirements = [
     "cdp-backend==3.2.0",
     "beautifulsoup4",
-    "requests"
+    "requests",
+    "python-dateutil"
 ]
 
 pipeline_requirements = [
