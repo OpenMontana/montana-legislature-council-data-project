@@ -91,7 +91,6 @@ def get_events(
             # TODO: Use from_dt and to_dt to filter bill actions within date range
             parsed_bill_row = BeautifulSoup(bill_row, 'html.parser')
             bill_cells = parsed_bill_row.find_all('td')
-            all_links = bill_cells[-1].find_all('a')
             sliq_links = bill_cells[-1].find_all('a', href=re.compile('sliq'))
 
             hearing_data = {}
@@ -114,15 +113,16 @@ def get_events(
                         title += ' - ' + committee
                     hearing_data['title'] = title
                     hearing_data['mp4_recording_url'] = parsed_media_info['Url']
-                    # The `external_source_id` will be used by the Capitol Tracker frontend to correlate the bill to the CDP event ID.
+                    # The `external_source_id` will be used by the Capitol Tracker frontend to correlate the bill to
+                    # the CDP event ID.
                     hearing_data['external_source_id'] = sliq_link
 
                     # Get the start and end time positions for the videos
                     event_info_text = re.search('AgendaTree:(.*),', sliq_html).groups()[0]
                     event_info_json = json.loads(event_info_text)
                     parsed_url = urlparse(sliq_link)
-                    # TODO: Handle if this isn't in the query? Does that always mean that the timestamp hasn't been included yet, thus the video
-                    # shouldn't be scraped on this pass? 
+                    # TODO: Handle if this isn't in the query? Does that always mean that the timestamp hasn't been
+                    # included yet, thus the video shouldn't be scraped on this pass? 
                     agenda_id = 'A' + parse_qs(parsed_url.query)['agendaId'][0]
                     agenda_index = [i for i, d in enumerate(event_info_json) if agenda_id in d.values()][0]
                     start_time = event_info_json[agenda_index]['startTime']
@@ -130,19 +130,16 @@ def get_events(
                     end_time = None
                     if len(event_info_json) > agenda_index + 1:
                         end_time = event_info_json[agenda_index + 1]['startTime']
-                    
+
                     hearing_data['start_time'] = start_time
-                    if not end_time is None:
+                    if end_time is not None:
                         hearing_data['end_time'] = end_time
 
                     last_link_added = True
-            
+
             event_data.append(hearing_data)
 
     # print(event_data)
-
-    # TODO grab timestamp info and set to new metadata for Chris' CDP backend change to handle subset of video
-    
     # TODO create event ingestion model
 
     return []
