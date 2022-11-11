@@ -14,7 +14,7 @@ requirements = [
 ]
 
 pipeline_requirements = [
-    "cdp-backend[pipeline]==3.2.0",
+    "cdp-backend[pipeline] @ git+https://github.com/CouncilDataProject/cdp-backend@81bfaf5a26404c1e74b8efa8af9bfa05f4bb8df6",
 ]
 
 test_requirements = [
