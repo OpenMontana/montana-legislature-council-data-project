@@ -6,7 +6,10 @@
 from setuptools import find_packages, setup
 
 requirements = [
-    "cdp-backend==3.2.0",
+    "cdp-backend @ git+https://github.com/CouncilDataProject/cdp-backend@81bfaf5a26404c1e74b8efa8af9bfa05f4bb8df6",
+    #"cdp-backend==3.2.0",
+    "beautifulsoup4",
+    "requests",
     "python-dateutil"
 ]
 
