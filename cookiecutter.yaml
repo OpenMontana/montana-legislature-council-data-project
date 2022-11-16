@@ -1,6 +1,6 @@
 default_context:
     municipality: "Montana State Legislature"
-    iana_timezone: "America/Missoula"
+    iana_timezone: "America/Denver"
     governing_body_type: "other"
     municipality_slug: "montana-legislature"
     python_municipality_slug: "montana_legislature"
