@@ -1,20 +1,20 @@
 {
   "files": {
-    "main.js": "/montana-legislature-council-data-project/static/js/main.d77dff14.chunk.js",
-    "main.js.map": "/montana-legislature-council-data-project/static/js/main.d77dff14.chunk.js.map",
-    "runtime-main.js": "/montana-legislature-council-data-project/static/js/runtime-main.70fc2b06.js",
-    "runtime-main.js.map": "/montana-legislature-council-data-project/static/js/runtime-main.70fc2b06.js.map",
+    "main.js": "/montana-legislature-council-data-project/static/js/main.6d501545.chunk.js",
+    "main.js.map": "/montana-legislature-council-data-project/static/js/main.6d501545.chunk.js.map",
+    "runtime-main.js": "/montana-legislature-council-data-project/static/js/runtime-main.7a901e60.js",
+    "runtime-main.js.map": "/montana-legislature-council-data-project/static/js/runtime-main.7a901e60.js.map",
     "static/css/2.5082ff89.chunk.css": "/montana-legislature-council-data-project/static/css/2.5082ff89.chunk.css",
-    "static/js/2.e5935300.chunk.js": "/montana-legislature-council-data-project/static/js/2.e5935300.chunk.js",
-    "static/js/2.e5935300.chunk.js.map": "/montana-legislature-council-data-project/static/js/2.e5935300.chunk.js.map",
+    "static/js/2.3d96e941.chunk.js": "/montana-legislature-council-data-project/static/js/2.3d96e941.chunk.js",
+    "static/js/2.3d96e941.chunk.js.map": "/montana-legislature-council-data-project/static/js/2.3d96e941.chunk.js.map",
     "index.html": "/montana-legislature-council-data-project/index.html",
     "static/css/2.5082ff89.chunk.css.map": "/montana-legislature-council-data-project/static/css/2.5082ff89.chunk.css.map",
-    "static/js/2.e5935300.chunk.js.LICENSE.txt": "/montana-legislature-council-data-project/static/js/2.e5935300.chunk.js.LICENSE.txt"
+    "static/js/2.3d96e941.chunk.js.LICENSE.txt": "/montana-legislature-council-data-project/static/js/2.3d96e941.chunk.js.LICENSE.txt"
   },
   "entrypoints": [
-    "static/js/runtime-main.70fc2b06.js",
+    "static/js/runtime-main.7a901e60.js",
     "static/css/2.5082ff89.chunk.css",
-    "static/js/2.e5935300.chunk.js",
-    "static/js/main.d77dff14.chunk.js"
+    "static/js/2.3d96e941.chunk.js",
+    "static/js/main.6d501545.chunk.js"
   ]
 }
