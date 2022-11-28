@@ -56,8 +56,9 @@ def get_events(
     """
     log.info("Starting MT Legislature Scraper")
 
-    # TODO: Read key bills from config or Capitol Tracker JSON
-    key_bill_names = ["HB 1"]
+    # Set to False if you want to limit what you're scraping to only the bills listed in `key_bill_names`
+    should_scrape_all_bills = False
+    key_bill_names = ["HB 25"]
     
     # Start at the big table of all bills from the 2021 session.
     bills_url_2021 = "http://laws.leg.mt.gov/legprd/LAW0217W$BAIV.return_all_bills?P_SESS=20211"
@@ -68,23 +69,23 @@ def get_events(
     bills_table_rows = bills_table.find_all('tr')[1:]
     print(f"Found table with {len(bills_table_rows) - 1} rows.")
 
-    # Of all the bills, narrow down to only the key bills and store off the LAWS bill URL for the next step.
-    key_bills_data = []
+    # Store off the LAWS bill URLs for the bills of interest for the next step.
+    bills_data = []
     for bill_row in bills_table_rows:
         bill_link = bill_row.find_all('a')[0]
         bill_type_number = bill_link.text
         bill_data = {}
-        if bill_type_number in key_bill_names:
+        if should_scrape_all_bills or bill_type_number in key_bill_names:
             bill_data['bill_type_number'] = bill_type_number
             bill_data['description'] = bill_row.find_all('td')[-1].text
             bill_data['laws_bill_url'] = "http://laws.leg.mt.gov/legprd/" + bill_link['href']
-            key_bills_data.append(bill_data)
+            bills_data.append(bill_data)
 
-    print(f"Found key bills: {key_bills_data}")
+    print(f"Found bills: {bills_data}")
 
     event_data = []
     # Go to each LAWS bill URL and find bill actions that have associated recordings.
-    for bill_data in key_bills_data:
+    for bill_data in bills_data:
         laws_bill_html = requests.get(bill_data['laws_bill_url']).text
         # We use regex search on the full html instead of going through BeautifulSoup due to "invalid" HTML returned by
         # the server that can't be parsed by BeautifulSoup.
@@ -124,7 +125,7 @@ def get_events(
                     event_info_json = json.loads(event_info_text)
                     parsed_url = urlparse(sliq_link)
                     # TODO: Handle if this isn't in the query? Does that always mean that the timestamp hasn't been
-                    # included yet, thus the video shouldn't be scraped on this pass? 
+                    # included yet, thus the video shouldn't be scraped on this pass? Do full scrape and see what happens
                     agenda_id = 'A' + parse_qs(parsed_url.query)['agendaId'][0]
                     agenda_index = [i for i, d in enumerate(event_info_json) if agenda_id in d.values()][0]
                     start_time = event_info_json[agenda_index]['startTime']
@@ -141,13 +142,14 @@ def get_events(
 
             event_data.append(hearing_data)
     
-    # TODO: Add start_time/end_time video timestamps to this when possible in CDP to transcribe only part of a video.
     def create_ingestion_model(e):
         return EventIngestionModel(
             body=Body(name=e['title']),
             sessions=[
                 Session(
                     video_uri=e['video_uri'],
+                    video_start_time=e['start_time'],
+                    video_end_time=e['end_time'],
                     # TODO: Scrape correct datetime for session
                     session_datetime=datetime.now(),
                     session_index=0,
@@ -157,6 +159,8 @@ def get_events(
         )
 
     events = list(map(create_ingestion_model, event_data))
+
+    print(f"Events: {events}")
 
     # TODO: Return events when we're ready to run the scraper
     return []
