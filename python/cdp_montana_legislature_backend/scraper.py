@@ -58,7 +58,7 @@ def get_events(
 
     # Set to False if you want to limit what you're scraping to only the bills listed in `key_bill_names`
     should_scrape_all_bills = False
-    key_bill_names = ["HB 25"]
+    key_bill_names = ["HB 46"]
     
     # Start at the big table of all bills from the 2021 session.
     bills_url_2021 = "http://laws.leg.mt.gov/legprd/LAW0217W$BAIV.return_all_bills?P_SESS=20211"
@@ -67,7 +67,7 @@ def get_events(
     bills_table = parsed_bills_html.find_all('table')[1]
     # Skip the first row because it's headings within a <tr>
     bills_table_rows = bills_table.find_all('tr')[1:]
-    print(f"Found table with {len(bills_table_rows) - 1} rows.")
+    log.info(f"Found table with {len(bills_table_rows) - 1} rows.")
 
     # Store off the LAWS bill URLs for the bills of interest for the next step.
     bills_data = []
@@ -81,11 +81,10 @@ def get_events(
             bill_data['laws_bill_url'] = "http://laws.leg.mt.gov/legprd/" + bill_link['href']
             bills_data.append(bill_data)
 
-    print(f"Found bills: {bills_data}")
-
     event_data = []
     # Go to each LAWS bill URL and find bill actions that have associated recordings.
     for bill_data in bills_data:
+        log.info(f"Starting scrape of {bill_data}")
         laws_bill_html = requests.get(bill_data['laws_bill_url']).text
         # We use regex search on the full html instead of going through BeautifulSoup due to "invalid" HTML returned by
         # the server that can't be parsed by BeautifulSoup.
@@ -104,7 +103,12 @@ def get_events(
                 sliq_link = link['href']
                 sliq_html = requests.get(sliq_link).text
 
-                media_info = re.search('downloadMediaUrls = (.*);', sliq_html).groups()[0]
+                media_info_regex = re.search('downloadMediaUrls = (.*);', sliq_html)
+                # No media is on the page as far as we are concerned
+                if media_info_regex is None:
+                    continue
+                    
+                media_info = media_info_regex.groups()[0]
                 parsed_media_info = json.loads(media_info)[0]
                 is_video = parsed_media_info['AudioOnly'] is False
 
@@ -128,20 +132,20 @@ def get_events(
                     # included yet, thus the video shouldn't be scraped on this pass? Do full scrape and see what happens
                     agenda_id = 'A' + parse_qs(parsed_url.query)['agendaId'][0]
                     agenda_index = [i for i, d in enumerate(event_info_json) if agenda_id in d.values()][0]
-                    first_agenda_item_datetime_str = event_info_json[0]['startTime']
-                    first_agenda_item_datetime = datetime.strptime(first_agenda_item_datetime_str, '%Y-%m-%dT%H:%M:%S').time()
-                    start_datetime_str = event_info_json[agenda_index]['startTime']
-                    start_datetime = datetime.strptime(start_datetime_str, '%Y-%m-%dT%H:%M:%S').time()
+                    first_agenda_item_datetime_str = event_info_json[0]['startTime'].split('.', 1)[0]
+                    first_agenda_item_time = datetime.strptime(first_agenda_item_datetime_str, '%Y-%m-%dT%H:%M:%S').time()
+                    start_datetime_str = event_info_json[agenda_index]['startTime'].split('.', 1)[0]
+                    start_datetime = datetime.strptime(start_datetime_str, '%Y-%m-%dT%H:%M:%S')
                     hearing_data['session_datetime'] = start_datetime
 
                     end_time = None
                     if len(event_info_json) > agenda_index + 1:
-                        end_datetime_str = event_info_json[agenda_index + 1]['startTime']
-                        end_datetime = datetime.strptime(end_datetime_str, '%Y-%m-%dT%H:%M:%S').time()
+                        end_datetime_str = event_info_json[agenda_index + 1]['startTime'].split('.', 1)[0]
+                        end_time = datetime.strptime(end_datetime_str, '%Y-%m-%dT%H:%M:%S').time()
 
-                    hearing_data['start_time'] = str(datetime.combine(date.min, start_datetime) - datetime.combine(date.min, first_agenda_item_datetime))
-                    if end_datetime is not None:
-                        hearing_data['end_time'] = str(datetime.combine(date.min, end_datetime) - datetime.combine(date.min, first_agenda_item_datetime))
+                    hearing_data['start_time'] = str(datetime.combine(date.min, start_datetime.time()) - datetime.combine(date.min, first_agenda_item_time))
+                    if end_time is not None:
+                        hearing_data['end_time'] = str(datetime.combine(date.min, end_time) - datetime.combine(date.min, first_agenda_item_time))
 
                     last_link_added = True
 
