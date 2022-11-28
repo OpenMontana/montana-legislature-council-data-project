@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from datetime import datetime
+from datetime import datetime, date
 from typing import List
 from bs4 import BeautifulSoup
 import requests
@@ -128,15 +128,20 @@ def get_events(
                     # included yet, thus the video shouldn't be scraped on this pass? Do full scrape and see what happens
                     agenda_id = 'A' + parse_qs(parsed_url.query)['agendaId'][0]
                     agenda_index = [i for i, d in enumerate(event_info_json) if agenda_id in d.values()][0]
-                    start_time = event_info_json[agenda_index]['startTime']
+                    first_agenda_item_datetime_str = event_info_json[0]['startTime']
+                    first_agenda_item_datetime = datetime.strptime(first_agenda_item_datetime_str, '%Y-%m-%dT%H:%M:%S').time()
+                    start_datetime_str = event_info_json[agenda_index]['startTime']
+                    start_datetime = datetime.strptime(start_datetime_str, '%Y-%m-%dT%H:%M:%S').time()
+                    hearing_data['session_datetime'] = start_datetime
 
                     end_time = None
                     if len(event_info_json) > agenda_index + 1:
-                        end_time = event_info_json[agenda_index + 1]['startTime']
+                        end_datetime_str = event_info_json[agenda_index + 1]['startTime']
+                        end_datetime = datetime.strptime(end_datetime_str, '%Y-%m-%dT%H:%M:%S').time()
 
-                    hearing_data['start_time'] = start_time
-                    if end_time is not None:
-                        hearing_data['end_time'] = end_time
+                    hearing_data['start_time'] = str(datetime.combine(date.min, start_datetime) - datetime.combine(date.min, first_agenda_item_datetime))
+                    if end_datetime is not None:
+                        hearing_data['end_time'] = str(datetime.combine(date.min, end_datetime) - datetime.combine(date.min, first_agenda_item_datetime))
 
                     last_link_added = True
 
@@ -150,8 +155,7 @@ def get_events(
                     video_uri=e['video_uri'],
                     video_start_time=e['start_time'],
                     video_end_time=e['end_time'],
-                    # TODO: Scrape correct datetime for session
-                    session_datetime=datetime.now(),
+                    session_datetime=e['session_datetime'],
                     session_index=0,
                     external_source_id=e['external_source_id']
                 ),
