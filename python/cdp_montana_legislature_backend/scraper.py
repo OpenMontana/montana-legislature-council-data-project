@@ -58,7 +58,7 @@ def get_events(
 
     # Set to False if you want to limit what you're scraping to only the bills listed in `key_bill_names`
     should_scrape_all_bills = False
-    key_bill_names = ["HB 46"]
+    key_bill_names = ["HB 6"]
     
     # Start at the big table of all bills from the 2021 session.
     bills_url_2021 = "http://laws.leg.mt.gov/legprd/LAW0217W$BAIV.return_all_bills?P_SESS=20211"
@@ -139,9 +139,21 @@ def get_events(
                     hearing_data['session_datetime'] = start_datetime
 
                     end_time = None
-                    if len(event_info_json) > agenda_index + 1:
-                        end_datetime_str = event_info_json[agenda_index + 1]['startTime'].split('.', 1)[0]
-                        end_time = datetime.strptime(end_datetime_str, '%Y-%m-%dT%H:%M:%S').time()
+                    agenda_len = len(event_info_json)
+
+                    # Occasionally the timestamps will be the same for various agenda items, i.e., the hearings for two different bills share the
+                    # same timestamp. In the 2021 legislative session, out of 1312 bills, this only happened with 13 hearings.
+                    # This logic jumps to the next timestamp if the one directly after the one the agenda item is targeting is the same, and
+                    # keeps going until it finds a different timestamp.
+                    for i in range(1, agenda_len + 1):
+                        if agenda_len > agenda_index + i:
+                            end_datetime_str = event_info_json[agenda_index + i]['startTime'].split('.', 1)[0]
+                            end_time = datetime.strptime(end_datetime_str, '%Y-%m-%dT%H:%M:%S').time()
+
+                        if end_time == start_datetime.time():
+                            continue
+                        else:
+                            break
 
                     hearing_data['start_time'] = str(datetime.combine(date.min, start_datetime.time()) - datetime.combine(date.min, first_agenda_item_time))
                     if end_time is not None:
@@ -152,19 +164,22 @@ def get_events(
             event_data.append(hearing_data)
     
     def create_ingestion_model(e):
-        return EventIngestionModel(
-            body=Body(name=e['title']),
-            sessions=[
-                Session(
-                    video_uri=e['video_uri'],
-                    video_start_time=e['start_time'],
-                    video_end_time=e['end_time'],
-                    session_datetime=e['session_datetime'],
-                    session_index=0,
-                    external_source_id=e['external_source_id']
-                ),
-            ],
-        )
+        try:
+            return EventIngestionModel(
+                body=Body(name=e['title']),
+                sessions=[
+                    Session(
+                        video_uri=e['video_uri'],
+                        video_start_time=e['start_time'],
+                        video_end_time=e['end_time'],
+                        session_datetime=e['session_datetime'],
+                        session_index=0,
+                        external_source_id=e['external_source_id']
+                    ),
+                ],
+            )
+        except Exception as exception:
+            log.info(f"===================================================\n\n\nGot exception:\n\n {exception} \n\nFor this event:\n\n {e}\n\n\n===================================================")
 
     events = list(map(create_ingestion_model, event_data))
 
