@@ -141,10 +141,11 @@ def get_events(
                     end_time = None
                     agenda_len = len(event_info_json)
 
-                    # Occasionally the timestamps will be the same for various agenda items, i.e., the hearings for two different bills share the
-                    # same timestamp. In the 2021 legislative session, out of 1312 bills, this only happened with 13 hearings.
-                    # This logic jumps to the next timestamp if the one directly after the one the agenda item is targeting is the same, and
-                    # keeps going until it finds a different timestamp.
+                    # Occasionally the timestamps will be the same for various agenda items, i.e., the hearings for
+                    # two different bills share the same timestamp. In the 2021 legislative session, out of 1312 bills,
+                    # this only happened with 13 hearings. This logic jumps to the next timestamp if the one directly
+                    # after the one the agenda item is targeting is the same, and keeps going until it finds a different
+                    # timestamp.
                     for i in range(1, agenda_len + 1):
                         if agenda_len > agenda_index + i:
                             end_datetime_str = event_info_json[agenda_index + i]['startTime'].split('.', 1)[0]
@@ -179,7 +180,9 @@ def get_events(
                 ],
             )
         except Exception as exception:
-            log.info(f"===================================================\n\n\nGot exception:\n\n {exception} \n\nFor this event:\n\n {e}\n\n\n===================================================")
+            log.info(f"===================================================\n\n\n" + 
+            "Got exception:\n\n {exception} \n\nFor this event:\n\n {e}\n\n\n" + 
+            "===================================================")
 
     events = list(map(create_ingestion_model, event_data))
 
