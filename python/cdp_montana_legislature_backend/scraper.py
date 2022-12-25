@@ -195,10 +195,11 @@ def get_events(
                     ),
                 ],
             )
+        # noqa: F841,W504
         except Exception as exception:
-            log.info(f"===================================================\n\n\n" + 
-            "Got exception:\n\n {exception} \n\nFor this event:\n\n {e}\n\n\n" + 
-            "===================================================")
+            log.info("===================================================\n\n\n" + 
+                "Got exception:\n\n {exception} \n\nFor this event:\n\n {e}\n\n\n" + 
+                "===================================================")
 
     events = list(map(create_ingestion_model, event_data))
 
