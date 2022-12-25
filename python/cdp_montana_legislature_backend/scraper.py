@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# flake8: noqa
 
 import logging
 from datetime import datetime, date
@@ -197,7 +198,6 @@ def get_events(
                     ),
                 ],
             )
-        # noqa: F841,W504
         except Exception as exception:
             log.info("===================================================\n\n\n" + 
                 "Got exception:\n\n {exception} \n\nFor this event:\n\n {e}\n\n\n" + 
