@@ -83,13 +83,14 @@ def get_events(
             last_update_date = datetime.strptime(last_update_dt_str, "%m/%d/%Y").date()
 
             # Only try to scrape this bill if it has been updated between the from_dt and to_dt params passed to the scraper.
-            is_bill_updated_after_specified_start = from_dt is None or last_update_date >= from_dt.date()
-            is_bill_updated_before_specified_end = to_dt is None or last_update_date <= to_dt.date()
-            if is_bill_updated_after_specified_start and is_bill_updated_before_specified_end:
-                bill_data['bill_type_number'] = bill_type_number
-                bill_data['description'] = bill_row.find_all('td')[-1].text
-                bill_data['laws_bill_url'] = "http://laws.leg.mt.gov/legprd/" + bill_link['href']
-                bills_data.append(bill_data)
+            # This is turned off now for easier testing, but can be turned on if the scraper needs a performance improvement once things are rolling.
+            # is_bill_updated_after_specified_start = from_dt is None or last_update_date >= from_dt.date()
+            # is_bill_updated_before_specified_end = to_dt is None or last_update_date <= to_dt.date()
+            # if is_bill_updated_after_specified_start and is_bill_updated_before_specified_end:
+            bill_data['bill_type_number'] = bill_type_number
+            bill_data['description'] = bill_row.find_all('td')[-1].text
+            bill_data['laws_bill_url'] = "http://laws.leg.mt.gov/legprd/" + bill_link['href']
+            bills_data.append(bill_data)
 
     event_data = []
     # Go to each LAWS bill URL and find bill actions that have associated recordings.
@@ -144,39 +145,40 @@ def get_events(
                         event_info_text = re.search('AgendaTree:(.*),', sliq_html).groups()[0]
                         event_info_json = json.loads(event_info_text)
                         parsed_url = urlparse(sliq_link)
-                        # TODO: Handle if this isn't in the query? Does that always mean that the timestamp hasn't been
-                        # included yet, thus the video shouldn't be scraped on this pass? Do full scrape and see what happens
-                        agenda_id = 'A' + parse_qs(parsed_url.query)['agendaId'][0]
-                        agenda_index = [i for i, d in enumerate(event_info_json) if agenda_id in d.values()][0]
-                        first_agenda_item_datetime_str = event_info_json[0]['startTime'].split('.', 1)[0]
-                        first_agenda_item_time = datetime.strptime(first_agenda_item_datetime_str, '%Y-%m-%dT%H:%M:%S').time()
-                        start_datetime_str = event_info_json[agenda_index]['startTime'].split('.', 1)[0]
-                        start_datetime = datetime.strptime(start_datetime_str, '%Y-%m-%dT%H:%M:%S')
-                        hearing_data['session_datetime'] = start_datetime
+                        # If there is no `agendaId` in the url, we are assuming timestamps haven't been added yet. For 10 more days,
+                        # we will continue to try to scrape this video again until there are timestamps.
+                        if 'agendaId' in parse_qs(parsed_url.query):
+                            agenda_id = 'A' + parse_qs(parsed_url.query)['agendaId'][0]
+                            agenda_index = [i for i, d in enumerate(event_info_json) if agenda_id in d.values()][0]
+                            first_agenda_item_datetime_str = event_info_json[0]['startTime'].split('.', 1)[0]
+                            first_agenda_item_time = datetime.strptime(first_agenda_item_datetime_str, '%Y-%m-%dT%H:%M:%S').time()
+                            start_datetime_str = event_info_json[agenda_index]['startTime'].split('.', 1)[0]
+                            start_datetime = datetime.strptime(start_datetime_str, '%Y-%m-%dT%H:%M:%S')
+                            hearing_data['session_datetime'] = start_datetime
 
-                        end_time = None
-                        agenda_len = len(event_info_json)
+                            end_time = None
+                            agenda_len = len(event_info_json)
 
-                        # Occasionally the timestamps will be the same for various agenda items, i.e., the hearings for
-                        # two different bills share the same timestamp. In the 2021 legislative session, out of 1312 bills,
-                        # this only happened with 13 hearings. This logic jumps to the next timestamp if the one directly
-                        # after the one the agenda item is targeting is the same, and keeps going until it finds a different
-                        # timestamp.
-                        for i in range(1, agenda_len + 1):
-                            if agenda_len > agenda_index + i:
-                                end_datetime_str = event_info_json[agenda_index + i]['startTime'].split('.', 1)[0]
-                                end_time = datetime.strptime(end_datetime_str, '%Y-%m-%dT%H:%M:%S').time()
+                            # Occasionally the timestamps will be the same for various agenda items, i.e., the hearings for
+                            # two different bills share the same timestamp. In the 2021 legislative session, out of 1312 bills,
+                            # this only happened with 13 hearings. This logic jumps to the next timestamp if the one directly
+                            # after the one the agenda item is targeting is the same, and keeps going until it finds a different
+                            # timestamp.
+                            for i in range(1, agenda_len + 1):
+                                if agenda_len > agenda_index + i:
+                                    end_datetime_str = event_info_json[agenda_index + i]['startTime'].split('.', 1)[0]
+                                    end_time = datetime.strptime(end_datetime_str, '%Y-%m-%dT%H:%M:%S').time()
 
-                            if end_time == start_datetime.time():
-                                continue
-                            else:
-                                break
+                                if end_time == start_datetime.time():
+                                    continue
+                                else:
+                                    break
 
-                        hearing_data['start_time'] = str(datetime.combine(date.min, start_datetime.time()) - datetime.combine(date.min, first_agenda_item_time))
-                        if end_time is not None:
-                            hearing_data['end_time'] = str(datetime.combine(date.min, end_time) - datetime.combine(date.min, first_agenda_item_time))
+                            hearing_data['start_time'] = str(datetime.combine(date.min, start_datetime.time()) - datetime.combine(date.min, first_agenda_item_time))
+                            if end_time is not None:
+                                hearing_data['end_time'] = str(datetime.combine(date.min, end_time) - datetime.combine(date.min, first_agenda_item_time))
 
-                        last_link_added = True
+                            last_link_added = True
 
                 event_data.append(hearing_data)
     
