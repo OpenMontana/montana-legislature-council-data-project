@@ -65,4 +65,5 @@ jobs:
         cd python/
         run_cdp_event_gather event-gather-config.json \
           --from ${{ github.event.inputs.from }} \
-          --to ${{ github.event.inputs.to }}
+          --to ${{ github.event.inputs.to }} \
+          --parallel

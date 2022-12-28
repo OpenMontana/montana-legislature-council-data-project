@@ -59,7 +59,7 @@ def get_events(
 
     # Set to False if you want to limit what you're scraping to only the bills listed in `key_bill_names`
     should_scrape_all_bills = False
-    key_bill_names = ["HB 6"]
+    key_bill_names = ["HB 4"]
 
     # Start at the big table of all bills.
     bills_url_2021 = (
