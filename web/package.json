@@ -33,6 +33,5 @@
     },
     "overrides": {
         "@councildataproject/cdp-frontend": "code-for-montana/cdp-frontend#main"
-    },
-]
+    }
 }
