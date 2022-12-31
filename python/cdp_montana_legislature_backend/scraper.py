@@ -223,10 +223,10 @@ def get_events(
                         video_start_time=e["start_time"],
                         video_end_time=e["end_time"],
                         session_datetime=e["session_datetime"],
-                        session_index=0
+                        session_index=0,
                     ),
                 ],
-                external_source_id=e["external_source_id"]
+                external_source_id=e["external_source_id"],
             )
         except Exception as exception:
             log.info(
