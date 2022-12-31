@@ -7,14 +7,14 @@ from setuptools import find_packages, setup
 
 requirements = [
     # "cdp-backend==3.2.10",
-    "cdp-backend @ git+https://github.com/CouncilDataProject/cdp-backend@21fe9c525b6aa81fa72731f54c9ec68c04eb7dac",
+    "cdp-backend @ git+https://github.com/CouncilDataProject/cdp-backend@606a6fcffc4c8b3a556ea5fedf1089af34842bae",
     "beautifulsoup4",
     "requests",
     "python-dateutil"
 ]
 
 pipeline_requirements = [
-    "cdp-backend[pipeline] @ git+https://github.com/CouncilDataProject/cdp-backend@21fe9c525b6aa81fa72731f54c9ec68c04eb7dac",
+    "cdp-backend[pipeline] @ git+https://github.com/CouncilDataProject/cdp-backend@606a6fcffc4c8b3a556ea5fedf1089af34842bae",
     # "cdp-backend[pipeline]==3.2.10",
 ]
 
