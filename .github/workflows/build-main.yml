@@ -34,7 +34,7 @@ jobs:
       run: |
         cd python/
         flake8 cdp_montana_legislature_backend --count --verbose --show-source --statistics
-        black --check cdp_montana_legislature_backend
+        black --check cdp_montana_legislature_backend --diff
 
   build-web:
     runs-on: ubuntu-latest
