@@ -58,8 +58,12 @@ def get_events(
     log.info("Starting MT Legislature Scraper.")
 
     # Start at the big table of all bills.
-    bills_url_2023 = "http://laws.leg.mt.gov/legprd/LAW0217W$BAIV.return_all_bills?P_SESS=20231"
-    log.info(f"Loading bills from {bills_url_2023} for the 2023 MT legislative session...")
+    bills_url_2023 = (
+        "http://laws.leg.mt.gov/legprd/LAW0217W$BAIV.return_all_bills?P_SESS=20231"
+    )
+    log.info(
+        f"Loading bills from {bills_url_2023} for the 2023 MT legislative session..."
+    )
 
     bills_html = requests.get(bills_url_2023).text
     parsed_bills_html = BeautifulSoup(bills_html, "html.parser")
@@ -94,14 +98,18 @@ def get_events(
     for bill_data in bills_data:
         log.info(f"[{bill_data['bill_type_number']}] Starting ingestion.")
 
-        log.info(f"[{bill_data['bill_type_number']}] Getting LAWS bill url: {bill_data['laws_bill_url']}...")
+        log.info(
+            f"[{bill_data['bill_type_number']}] Getting LAWS bill url: {bill_data['laws_bill_url']}..."
+        )
         laws_bill_html = requests.get(bill_data["laws_bill_url"]).text
         # We use regex search on the full html instead of going through BeautifulSoup due to "invalid" HTML returned by
         # the server that can't be parsed by BeautifulSoup.
         bill_rows_with_recordings = re.findall(".*sliq.*", laws_bill_html)
 
         if not bill_rows_with_recordings:
-            log.info(f"[{bill_data['bill_type_number']}] No bills found with recordings, no events will be ingested.")
+            log.info(
+                f"[{bill_data['bill_type_number']}] No bills found with recordings, no events will be ingested."
+            )
 
         for bill_row in bill_rows_with_recordings:
             parsed_bill_row = BeautifulSoup(bill_row, "html.parser")
@@ -119,7 +127,9 @@ def get_events(
             if is_hearing_after_specified_start and is_hearing_before_specified_end:
                 sliq_links = bill_cells[-1].find_all("a", href=re.compile("sliq"))
                 if not sliq_links:
-                    log.info(f"[{bill_data['bill_type_number']}] No sliq_links found, no events will be ingested.")
+                    log.info(
+                        f"[{bill_data['bill_type_number']}] No sliq_links found, no events will be ingested."
+                    )
 
                 hearing_data = {}
                 last_link_added = False
@@ -127,7 +137,9 @@ def get_events(
                 # If it doesn't exist, use the audio.
                 for link in sliq_links:
                     sliq_link = link["href"]
-                    log.info(f"[{bill_data['bill_type_number']}] Getting page from: {sliq_link}...")
+                    log.info(
+                        f"[{bill_data['bill_type_number']}] Getting page from: {sliq_link}..."
+                    )
                     sliq_html = requests.get(sliq_link).text
 
                     media_info_regex = re.search("downloadMediaUrls = (.*);", sliq_html)
@@ -215,10 +227,13 @@ def get_events(
                             last_link_added = True
                             event_data.append(hearing_data)
                         else:
-                            log.info(f"[{bill_data['bill_type_number']}] agendaId not found in {sliq_link}, no events will be ingested.")
+                            log.info(
+                                f"[{bill_data['bill_type_number']}] agendaId not found in {sliq_link}, no events will be ingested."
+                            )
             else:
-                log.info(f"[{bill_data['bill_type_number']}] No hearing in {from_dt} and {to_dt}, no events will be ingested.")
-
+                log.info(
+                    f"[{bill_data['bill_type_number']}] No hearing in {from_dt} and {to_dt}, no events will be ingested."
+                )
 
     def create_ingestion_model(e):
         try:
