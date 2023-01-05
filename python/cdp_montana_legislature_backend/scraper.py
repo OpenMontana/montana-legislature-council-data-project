@@ -55,18 +55,17 @@ def get_events(
     the from_dt and to_dt parameters. However, they are useful for manually
     kicking off pipelines from GitHub Actions UI.
     """
-    log.info("Starting MT Legislature Scraper")
-
-    # Set to False if you want to limit what you're scraping to only the bills listed in `key_bill_names`
-    should_scrape_all_bills = False
-    key_bill_names = ["HB 3"]
+    log.info("Starting MT Legislature Scraper.")
 
     # Start at the big table of all bills.
-    bills_url_2021 = (
-        "http://laws.leg.mt.gov/legprd/LAW0217W$BAIV.return_all_bills?P_SESS=20211"
+    bills_url_2023 = (
+        "http://laws.leg.mt.gov/legprd/LAW0217W$BAIV.return_all_bills?P_SESS=20231"
     )
-    # bills_url_2023 = "http://laws.leg.mt.gov/legprd/LAW0217W$BAIV.return_all_bills?P_SESS=20231"
-    bills_html = requests.get(bills_url_2021).text
+    log.info(
+        f"Loading bills from {bills_url_2023} for the 2023 MT legislative session..."
+    )
+
+    bills_html = requests.get(bills_url_2023).text
     parsed_bills_html = BeautifulSoup(bills_html, "html.parser")
     bills_table = parsed_bills_html.find_all("table")[1]
     # Skip the first row because it's headings within a <tr>
@@ -79,30 +78,39 @@ def get_events(
         bill_link = bill_row.find_all("a")[0]
         bill_type_number = bill_link.text
         bill_data = {}
-        if should_scrape_all_bills or bill_type_number in key_bill_names:
-            last_update_dt_str = (bill_row.find_all("td")[-2].text).split(";")[0]
-            last_update_date = datetime.strptime(last_update_dt_str, "%m/%d/%Y").date()
 
-            # Only try to scrape this bill if it has been updated between the from_dt and to_dt params passed to the scraper.
-            # This is turned off now for easier testing, but can be turned on if the scraper needs a performance improvement once things are rolling.
-            # is_bill_updated_after_specified_start = from_dt is None or last_update_date >= from_dt.date()
-            # is_bill_updated_before_specified_end = to_dt is None or last_update_date <= to_dt.date()
-            # if is_bill_updated_after_specified_start and is_bill_updated_before_specified_end:
-            bill_data["bill_type_number"] = bill_type_number
-            bill_data["description"] = bill_row.find_all("td")[-1].text
-            bill_data["laws_bill_url"] = (
-                "http://laws.leg.mt.gov/legprd/" + bill_link["href"]
-            )
-            bills_data.append(bill_data)
+        # Only try to scrape this bill if it has been updated between the from_dt and to_dt params passed to the scraper
+        # This is turned off now for easier testing, but can be turned on if the scraper needs a performance improvement once things are rolling.
+        # last_update_dt_str = (bill_row.find_all("td")[-2].text).split(";")[0]
+        # last_update_date = datetime.strptime(last_update_dt_str, "%m/%d/%Y").date()
+        # is_bill_updated_after_specified_start = from_dt is None or last_update_date >= from_dt.date()
+        # is_bill_updated_before_specified_end = to_dt is None or last_update_date <= to_dt.date()
+        # if is_bill_updated_after_specified_start and is_bill_updated_before_specified_end:
+        bill_data["bill_type_number"] = bill_type_number
+        bill_data["description"] = bill_row.find_all("td")[-1].text
+        bill_data["laws_bill_url"] = (
+            "http://laws.leg.mt.gov/legprd/" + bill_link["href"]
+        )
+        bills_data.append(bill_data)
 
     event_data = []
     # Go to each LAWS bill URL and find bill actions that have associated recordings.
     for bill_data in bills_data:
-        # log.info(f"Starting scrape of {bill_data}")
+        log.info(f"[{bill_data['bill_type_number']}] Starting ingestion.")
+
+        log.info(
+            f"[{bill_data['bill_type_number']}] Getting LAWS bill url: {bill_data['laws_bill_url']}..."
+        )
         laws_bill_html = requests.get(bill_data["laws_bill_url"]).text
         # We use regex search on the full html instead of going through BeautifulSoup due to "invalid" HTML returned by
         # the server that can't be parsed by BeautifulSoup.
         bill_rows_with_recordings = re.findall(".*sliq.*", laws_bill_html)
+
+        if not bill_rows_with_recordings:
+            log.info(
+                f"[{bill_data['bill_type_number']}] No bills found with recordings, no events will be ingested."
+            )
+
         for bill_row in bill_rows_with_recordings:
             parsed_bill_row = BeautifulSoup(bill_row, "html.parser")
             bill_cells = parsed_bill_row.find_all("td")
@@ -118,6 +126,10 @@ def get_events(
 
             if is_hearing_after_specified_start and is_hearing_before_specified_end:
                 sliq_links = bill_cells[-1].find_all("a", href=re.compile("sliq"))
+                if not sliq_links:
+                    log.info(
+                        f"[{bill_data['bill_type_number']}] No sliq_links found, no events will be ingested."
+                    )
 
                 hearing_data = {}
                 last_link_added = False
@@ -125,6 +137,9 @@ def get_events(
                 # If it doesn't exist, use the audio.
                 for link in sliq_links:
                     sliq_link = link["href"]
+                    log.info(
+                        f"[{bill_data['bill_type_number']}] Getting page from: {sliq_link}..."
+                    )
                     sliq_html = requests.get(sliq_link).text
 
                     media_info_regex = re.search("downloadMediaUrls = (.*);", sliq_html)
@@ -210,8 +225,15 @@ def get_events(
                                 )
 
                             last_link_added = True
-
-                event_data.append(hearing_data)
+                            event_data.append(hearing_data)
+                        else:
+                            log.info(
+                                f"[{bill_data['bill_type_number']}] agendaId not found in {sliq_link}, no events will be ingested."
+                            )
+            else:
+                log.info(
+                    f"[{bill_data['bill_type_number']}] No hearing in {from_dt} and {to_dt}, no events will be ingested."
+                )
 
     def create_ingestion_model(e):
         try:
