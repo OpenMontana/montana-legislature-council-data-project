@@ -99,6 +99,10 @@ def get_events(
         # We use regex search on the full html instead of going through BeautifulSoup due to "invalid" HTML returned by
         # the server that can't be parsed by BeautifulSoup.
         bill_rows_with_recordings = re.findall(".*sliq.*", laws_bill_html)
+
+        if not bill_rows_with_recordings:
+            log.info(f"[{bill_data['bill_type_number']}] No bills found with recordings, no events will be ingested.")
+
         for bill_row in bill_rows_with_recordings:
             parsed_bill_row = BeautifulSoup(bill_row, "html.parser")
             bill_cells = parsed_bill_row.find_all("td")
@@ -114,6 +118,8 @@ def get_events(
 
             if is_hearing_after_specified_start and is_hearing_before_specified_end:
                 sliq_links = bill_cells[-1].find_all("a", href=re.compile("sliq"))
+                if not sliq_links:
+                    log.info(f"[{bill_data['bill_type_number']}] No sliq_links found, no events will be ingested.")
 
                 hearing_data = {}
                 last_link_added = False
@@ -209,7 +215,7 @@ def get_events(
                             last_link_added = True
                             event_data.append(hearing_data)
                         else:
-                            log.info(f"[{bill_data['bill_type_number']}] agendaId not found in {sliq_link}, no event will be ingested.")
+                            log.info(f"[{bill_data['bill_type_number']}] agendaId not found in {sliq_link}, no events will be ingested.")
             else:
                 log.info(f"[{bill_data['bill_type_number']}] No hearing in {from_dt} and {to_dt}, no events will be ingested.")
 
