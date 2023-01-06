@@ -10,7 +10,7 @@
         "deploy": "gh-pages -d build"
     },
     "dependencies": {
-        "@councildataproject/cdp-frontend": "code-for-montana/cdp-frontend#main",
+        "@councildataproject/cdp-frontend": "git://github.com/openmontana/cdp-frontend#main",
         "react": "^16.13.1",
         "react-dom": "^16.13.1"
     },
@@ -32,6 +32,6 @@
         ]
     },
     "overrides": {
-        "@councildataproject/cdp-frontend": "code-for-montana/cdp-frontend#main"
+        "@councildataproject/cdp-frontend": "git://github.com/openmontana/cdp-frontend#main"
     }
 }
