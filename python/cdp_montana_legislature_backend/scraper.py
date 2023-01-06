@@ -178,12 +178,25 @@ def get_events(
                                 for i, d in enumerate(event_info_json)
                                 if agenda_id in d.values()
                             ][0]
-                            first_agenda_item_datetime_str = event_info_json[0][
-                                "startTime"
-                            ].split(".", 1)[0]
+
+                            log.info(
+                                f"[{bill_data['bill_type_number']}] agendaId={agenda_id}, agenda_index={agenda_index}"
+                            )
+                            log.info(
+                                f"[{bill_data['bill_type_number']}] event_info_json={event_info_json}"
+                            )
+
+                            # the first agenda item in the tree might not contain a timestamp so we need to iterate
+                            # the agenda tree until we find the first occurence of startTime
+                            first_agenda_item_datetime_str = next(
+                                a["startTime"]
+                                for a in event_info_json
+                                if a["startTime"]
+                            ).split(".", 1)[0]
                             first_agenda_item_time = datetime.strptime(
                                 first_agenda_item_datetime_str, "%Y-%m-%dT%H:%M:%S"
                             ).time()
+
                             start_datetime_str = event_info_json[agenda_index][
                                 "startTime"
                             ].split(".", 1)[0]
