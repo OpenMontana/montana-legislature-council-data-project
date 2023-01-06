@@ -4,17 +4,17 @@
     "main.js.map": "/montana-legislature-council-data-project/static/js/main.2a8cbe8b.chunk.js.map",
     "runtime-main.js": "/montana-legislature-council-data-project/static/js/runtime-main.23892242.js",
     "runtime-main.js.map": "/montana-legislature-council-data-project/static/js/runtime-main.23892242.js.map",
-    "static/css/2.3fe0b2dc.chunk.css": "/montana-legislature-council-data-project/static/css/2.3fe0b2dc.chunk.css",
-    "static/js/2.799834e1.chunk.js": "/montana-legislature-council-data-project/static/js/2.799834e1.chunk.js",
-    "static/js/2.799834e1.chunk.js.map": "/montana-legislature-council-data-project/static/js/2.799834e1.chunk.js.map",
+    "static/css/2.23a78914.chunk.css": "/montana-legislature-council-data-project/static/css/2.23a78914.chunk.css",
+    "static/js/2.ec2ad02d.chunk.js": "/montana-legislature-council-data-project/static/js/2.ec2ad02d.chunk.js",
+    "static/js/2.ec2ad02d.chunk.js.map": "/montana-legislature-council-data-project/static/js/2.ec2ad02d.chunk.js.map",
     "index.html": "/montana-legislature-council-data-project/index.html",
-    "static/css/2.3fe0b2dc.chunk.css.map": "/montana-legislature-council-data-project/static/css/2.3fe0b2dc.chunk.css.map",
-    "static/js/2.799834e1.chunk.js.LICENSE.txt": "/montana-legislature-council-data-project/static/js/2.799834e1.chunk.js.LICENSE.txt"
+    "static/css/2.23a78914.chunk.css.map": "/montana-legislature-council-data-project/static/css/2.23a78914.chunk.css.map",
+    "static/js/2.ec2ad02d.chunk.js.LICENSE.txt": "/montana-legislature-council-data-project/static/js/2.ec2ad02d.chunk.js.LICENSE.txt"
   },
   "entrypoints": [
     "static/js/runtime-main.23892242.js",
-    "static/css/2.3fe0b2dc.chunk.css",
-    "static/js/2.799834e1.chunk.js",
+    "static/css/2.23a78914.chunk.css",
+    "static/js/2.ec2ad02d.chunk.js",
     "static/js/main.2a8cbe8b.chunk.js"
   ]
 }
