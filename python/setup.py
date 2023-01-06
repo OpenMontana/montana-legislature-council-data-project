@@ -6,23 +6,16 @@
 from setuptools import find_packages, setup
 
 requirements = [
-    "cdp-backend==3.2.11",
-    # "cdp-backend @ git+https://github.com/CouncilDataProject/cdp-backend@4cdb0abf453cd2d9a541505d32ef8a46859c993c",
+    "cdp-backend[pipeline]==3.2.11",
     "beautifulsoup4",
     "requests",
     "python-dateutil"
-]
-
-pipeline_requirements = [
-    # "cdp-backend[pipeline] @ git+https://github.com/CouncilDataProject/cdp-backend@4cdb0abf453cd2d9a541505d32ef8a46859c993c",
-    "cdp-backend[pipeline]==3.2.11",
 ]
 
 test_requirements = [
     "black>=19.10b0",
     "flake8>=3.8.3",
     "flake8-debugger>=3.2.1",
-    *pipeline_requirements,
 ]
 
 dev_requirements = [
@@ -31,12 +24,10 @@ dev_requirements = [
 ]
 
 extra_requirements = {
-    "pipeline": pipeline_requirements,
     "test": test_requirements,
     "dev": dev_requirements,
     "all": [
         *requirements,
-        *pipeline_requirements,
         *dev_requirements,
     ],
 }
