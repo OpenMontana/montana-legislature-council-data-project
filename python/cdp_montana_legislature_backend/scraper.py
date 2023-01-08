@@ -289,8 +289,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--log",
-        help="Sets the logging level, e.g. INFO, DEBUG; see logging module."
+        "--log", help="Sets the logging level, e.g. INFO, DEBUG; see logging module."
     )
 
     args = parser.parse_args()
@@ -299,9 +298,11 @@ if __name__ == "__main__":
     loglevel = args.log
     numeric_level = getattr(logging, loglevel.upper(), None)
     if not isinstance(numeric_level, int):
-        raise ValueError('Invalid log level: %s' % loglevel)
-    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=numeric_level)
-
+        raise ValueError("Invalid log level: %s" % loglevel)
+    logging.basicConfig(
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=numeric_level,
+    )
 
     from_dt = datetime.min
     to_dt = datetime.max
