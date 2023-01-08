@@ -15,19 +15,6 @@ from cdp_backend.pipeline.ingestion_models import Body
 from cdp_backend.pipeline.ingestion_models import EventIngestionModel
 from cdp_backend.pipeline.ingestion_models import Session
 
-# region logging
-
-log = logging.getLogger("cdp_montana_legislature_scraper")
-ch = logging.StreamHandler()
-ch.setFormatter(
-    logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-)
-log.addHandler(ch)
-
-# endregion
-
-###############################################################################
-
 
 def get_events(
     from_dt: datetime,
@@ -55,13 +42,13 @@ def get_events(
     the from_dt and to_dt parameters. However, they are useful for manually
     kicking off pipelines from GitHub Actions UI.
     """
-    log.info("Starting MT Legislature Scraper.")
+    logging.info("Starting MT Legislature Scraper.")
 
     # Start at the big table of all bills.
     bills_url_2023 = (
         "http://laws.leg.mt.gov/legprd/LAW0217W$BAIV.return_all_bills?P_SESS=20231"
     )
-    log.info(
+    logging.info(
         f"Loading bills from {bills_url_2023} for the 2023 MT legislative session..."
     )
 
@@ -70,7 +57,7 @@ def get_events(
     bills_table = parsed_bills_html.find_all("table")[1]
     # Skip the first row because it's headings within a <tr>
     bills_table_rows = bills_table.find_all("tr")[1:]
-    log.info(f"Found table with {len(bills_table_rows) - 1} rows.")
+    logging.info(f"Found table with {len(bills_table_rows) - 1} rows.")
 
     # Store off the LAWS bill URLs for the bills of interest for the next step.
     bills_data = []
@@ -96,9 +83,9 @@ def get_events(
     event_data = []
     # Go to each LAWS bill URL and find bill actions that have associated recordings.
     for bill_data in bills_data:
-        log.info(f"[{bill_data['bill_type_number']}] Starting ingestion.")
+        logging.info(f"[{bill_data['bill_type_number']}] Starting ingestion.")
 
-        log.info(
+        logging.info(
             f"[{bill_data['bill_type_number']}] Getting LAWS bill url: {bill_data['laws_bill_url']}..."
         )
         laws_bill_html = requests.get(bill_data["laws_bill_url"]).text
@@ -107,7 +94,7 @@ def get_events(
         bill_rows_with_recordings = re.findall(".*sliq.*", laws_bill_html)
 
         if not bill_rows_with_recordings:
-            log.info(
+            logging.info(
                 f"[{bill_data['bill_type_number']}] No bills found with recordings, no events will be ingested."
             )
 
@@ -127,7 +114,7 @@ def get_events(
             if is_hearing_after_specified_start and is_hearing_before_specified_end:
                 sliq_links = bill_cells[-1].find_all("a", href=re.compile("sliq"))
                 if not sliq_links:
-                    log.info(
+                    logging.info(
                         f"[{bill_data['bill_type_number']}] No sliq_links found, no events will be ingested."
                     )
 
@@ -137,7 +124,7 @@ def get_events(
                 # If it doesn't exist, use the audio.
                 for link in sliq_links:
                     sliq_link = link["href"]
-                    log.info(
+                    logging.info(
                         f"[{bill_data['bill_type_number']}] Getting page from: {sliq_link}..."
                     )
                     sliq_html = requests.get(sliq_link).text
@@ -179,10 +166,10 @@ def get_events(
                                 if agenda_id in d.values()
                             ][0]
 
-                            log.info(
+                            logging.debug(
                                 f"[{bill_data['bill_type_number']}] agendaId={agenda_id}, agenda_index={agenda_index}"
                             )
-                            log.info(
+                            logging.debug(
                                 f"[{bill_data['bill_type_number']}] event_info_json={event_info_json}"
                             )
 
@@ -210,7 +197,7 @@ def get_events(
 
                             # Occasionally the timestamps will be the same for various agenda items, i.e., the hearings for
                             # two different bills share the same timestamp. In the 2021 legislative session, out of 1312 bills,
-                            # this only happened with 13 hearings. This logic jumps to the next timestamp if the one directly
+                            # this only happened with 13 hearings. This loggingic jumps to the next timestamp if the one directly
                             # after the one the agenda item is targeting is the same, and keeps going until it finds a different
                             # timestamp.
                             for i in range(1, agenda_len + 1):
@@ -240,11 +227,11 @@ def get_events(
                             last_link_added = True
                             event_data.append(hearing_data)
                         else:
-                            log.info(
+                            logging.info(
                                 f"[{bill_data['bill_type_number']}] agendaId not found in {sliq_link}, no events will be ingested."
                             )
             else:
-                log.info(
+                logging.info(
                     f"[{bill_data['bill_type_number']}] No hearing in {from_dt} and {to_dt}, no events will be ingested."
                 )
 
@@ -264,7 +251,7 @@ def get_events(
                 external_source_id=e["external_source_id"],
             )
         except Exception as exception:
-            log.info(
+            logging.info(
                 "===================================================\n\n\n"
                 + "Got exception:\n\n {exception} \n\nFor this event:\n\n {e}\n\n\n"
                 + "==================================================="
@@ -272,14 +259,15 @@ def get_events(
 
     events = list(map(create_ingestion_model, event_data))
 
-    print(f"Events: {events}")
+    logging.info(f"Found {len(events)} to be ingested.")
+
+    for i, e in enumerate(events):
+        logging.info(e.to_json())
 
     return events
 
 
 if __name__ == "__main__":
-    log.setLevel(logging.DEBUG)
-
     import argparse
 
     parser = argparse.ArgumentParser(description="Scape events from MT Legislature")
@@ -300,7 +288,21 @@ if __name__ == "__main__":
         ),
     )
 
+    parser.add_argument(
+        "--log", help="Sets the logging level, e.g. INFO, DEBUG; see logging module."
+    )
+
     args = parser.parse_args()
+
+    # set up logging
+    loglevel = args.log
+    numeric_level = getattr(logging, loglevel.upper(), None)
+    if not isinstance(numeric_level, int):
+        raise ValueError("Invalid log level: %s" % loglevel)
+    logging.basicConfig(
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=numeric_level,
+    )
 
     from_dt = datetime.min
     to_dt = datetime.max
@@ -308,14 +310,13 @@ if __name__ == "__main__":
     from dateutil import parser
 
     if args.from_dt is not None:
-        log.debug(f"Parsing from_dt={args.from_dt} as datetime")
+        logging.debug(f"Parsing from_dt={args.from_dt} as datetime")
         from_dt = parser.isoparse(args.from_dt)
 
     if args.to_dt is not None:
-        log.debug(f"Parsing to_dt={args.to_dt} as datetime")
+        logging.debug(f"Parsing to_dt={args.to_dt} as datetime")
         to_dt = parser.isoparse(args.to_dt)
 
-    log.debug(f"Using arguments: from_dt={from_dt}, to_dt={to_dt}")
+    logging.debug(f"Using arguments: from_dt={from_dt}, to_dt={to_dt}")
 
-    events = get_events(from_dt, to_dt)
-    log.info(f"Scraped events: {events}")
+    get_events(from_dt, to_dt)
