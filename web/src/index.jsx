@@ -20,6 +20,7 @@ const config = {
 
 ReactDOM.render(
     <div>
+        {/**/}
         <AppConfigProvider appConfig={config}>
             <App />
         </AppConfigProvider>
