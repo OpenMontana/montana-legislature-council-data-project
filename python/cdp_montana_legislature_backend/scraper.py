@@ -55,10 +55,10 @@ def tag_to_bill(tag: Tag) -> Bill:
     return bill
 
 
-def get_bills(laws_root_url: str) -> List[Bill]:
+def get_bills(s: requests.Session, laws_root_url: str) -> List[Bill]:
     logging.info(f"Loading bills from {laws_root_url}…")
     laws_all_bills_html = BeautifulSoup(
-        requests.get(laws_root_url).text, features="html.parser"
+        s.get(laws_root_url).text, features="html.parser"
     )
     # The first table on the LAWS Bill Search Result page is in the header. The second table contains
     # the listing of the active bills.
@@ -99,7 +99,8 @@ def get_events(
 
     logging.info("Starting MT Legislature Scraper.")
 
-    bills = get_bills(LAWS_2023_ROOT_URL)
+    with requests.Session() as s:
+        bills = get_bills(s, LAWS_2023_ROOT_URL)
 
     event_data = []
     # Go to each LAWS bill URL and find bill actions that have associated recordings.
