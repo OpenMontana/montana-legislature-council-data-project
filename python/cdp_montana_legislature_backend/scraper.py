@@ -2,18 +2,72 @@
 # -*- coding: utf-8 -*-
 # flake8: noqa
 
+from dataclasses import dataclass
 import logging
 from datetime import datetime, date
 from typing import List
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 import requests
 import re
 import json
 
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, urljoin
 from cdp_backend.pipeline.ingestion_models import Body
 from cdp_backend.pipeline.ingestion_models import EventIngestionModel
 from cdp_backend.pipeline.ingestion_models import Session
+
+# MT Legislature 2023 Regular Session
+LAWS_2023_ROOT_URL = (
+    "http://laws.leg.mt.gov/legprd/LAW0217W$BAIV.return_all_bills?P_SESS=20231"
+)
+
+
+@dataclass
+class Bill:
+    type_number: str
+    short_title: str
+    action_url_path: str
+
+    def get_bill_actions_url(self) -> str:
+        return urljoin("http://laws.leg.mt.gov/legprd", self.action_url_path)
+
+
+def tag_to_bill(tag: Tag) -> Bill:
+    """Convert a Tag from each row in the LAWS search results bills table to a Bill."""
+    bill_link = tag.find_next("a")
+
+    if type(bill_link) is not Tag:
+        logging.error(f"Did not find an <a> in tag: {tag}!")
+        raise ValueError
+
+    # the inner HTML of the anchor tag contains the bill title, e.g. "HB-2"
+    bill_type_number = bill_link.text
+    # the href contains a relative path to the actions page for this bill, e.g.
+    # LAW0210W$BSIV.ActionQuery?P_BILL_NO1=2&P_BLTP_BILL_TYP_CD=HB&Z_ACTION=Find&P_SESS=20231
+    # because the url path is relative in this tag we must prefix it with the LAWS application
+    bill_action_url_path = bill_link.attrs["href"]
+    # the last <td> in this row contains a short description of the bill, e.g.
+    # "General Appropriations Act"
+    short_title = tag.find_all("td")[-1].text
+
+    bill = Bill(bill_type_number, short_title, bill_action_url_path)
+    logging.debug(f"Found bill: {bill}.")
+    return bill
+
+
+def get_bills(laws_root_url: str) -> List[Bill]:
+    logging.info(f"Loading bills from {laws_root_url}…")
+    laws_all_bills_html = BeautifulSoup(
+        requests.get(laws_root_url).text, features="html.parser"
+    )
+    # The first table on the LAWS Bill Search Result page is in the header. The second table contains
+    # the listing of the active bills.
+    all_bills_table: Tag = laws_all_bills_html.find_all("table")[1]
+    # This <table> doesn't have a <th>, so we get all <tr> and skip the first row
+    # which contains the column headers.
+    all_bills_table_rows: List[Tag] = all_bills_table.find_all("tr")[1:]
+    logging.debug(f"Found {len(all_bills_table_rows)} bills.")
+    return [tag_to_bill(t) for t in all_bills_table_rows]
 
 
 def get_events(
@@ -42,60 +96,27 @@ def get_events(
     the from_dt and to_dt parameters. However, they are useful for manually
     kicking off pipelines from GitHub Actions UI.
     """
+
     logging.info("Starting MT Legislature Scraper.")
 
-    # Start at the big table of all bills.
-    bills_url_2023 = (
-        "http://laws.leg.mt.gov/legprd/LAW0217W$BAIV.return_all_bills?P_SESS=20231"
-    )
-    logging.info(
-        f"Loading bills from {bills_url_2023} for the 2023 MT legislative session..."
-    )
-
-    bills_html = requests.get(bills_url_2023).text
-    parsed_bills_html = BeautifulSoup(bills_html, "html.parser")
-    bills_table = parsed_bills_html.find_all("table")[1]
-    # Skip the first row because it's headings within a <tr>
-    bills_table_rows = bills_table.find_all("tr")[1:]
-    logging.info(f"Found table with {len(bills_table_rows) - 1} rows.")
-
-    # Store off the LAWS bill URLs for the bills of interest for the next step.
-    bills_data = []
-    for bill_row in bills_table_rows:
-        bill_link = bill_row.find_all("a")[0]
-        bill_type_number = bill_link.text
-        bill_data = {}
-
-        # Only try to scrape this bill if it has been updated between the from_dt and to_dt params passed to the scraper
-        # This is turned off now for easier testing, but can be turned on if the scraper needs a performance improvement once things are rolling.
-        # last_update_dt_str = (bill_row.find_all("td")[-2].text).split(";")[0]
-        # last_update_date = datetime.strptime(last_update_dt_str, "%m/%d/%Y").date()
-        # is_bill_updated_after_specified_start = from_dt is None or last_update_date >= from_dt.date()
-        # is_bill_updated_before_specified_end = to_dt is None or last_update_date <= to_dt.date()
-        # if is_bill_updated_after_specified_start and is_bill_updated_before_specified_end:
-        bill_data["bill_type_number"] = bill_type_number
-        bill_data["description"] = bill_row.find_all("td")[-1].text
-        bill_data["laws_bill_url"] = (
-            "http://laws.leg.mt.gov/legprd/" + bill_link["href"]
-        )
-        bills_data.append(bill_data)
+    bills = get_bills(LAWS_2023_ROOT_URL)
 
     event_data = []
     # Go to each LAWS bill URL and find bill actions that have associated recordings.
-    for bill_data in bills_data:
-        logging.info(f"[{bill_data['bill_type_number']}] Starting ingestion.")
+    for bill in bills:
+        logging.info(f"[{bill.type_number}] Starting ingestion.")
 
         logging.info(
-            f"[{bill_data['bill_type_number']}] Getting LAWS bill url: {bill_data['laws_bill_url']}..."
+            f"[{bill.type_number}] Getting LAWS bill url: {bill.get_bill_actions_url()}..."
         )
-        laws_bill_html = requests.get(bill_data["laws_bill_url"]).text
+        laws_bill_html = requests.get(bill.get_bill_actions_url()).text
         # We use regex search on the full html instead of going through BeautifulSoup due to "invalid" HTML returned by
         # the server that can't be parsed by BeautifulSoup.
         bill_rows_with_recordings = re.findall(".*sliq.*", laws_bill_html)
 
         if not bill_rows_with_recordings:
             logging.info(
-                f"[{bill_data['bill_type_number']}] No bills found with recordings, no events will be ingested."
+                f"[{bill.type_number}] No bills found with recordings, no events will be ingested."
             )
 
         for bill_row in bill_rows_with_recordings:
@@ -115,7 +136,7 @@ def get_events(
                 sliq_links = bill_cells[-1].find_all("a", href=re.compile("sliq"))
                 if not sliq_links:
                     logging.info(
-                        f"[{bill_data['bill_type_number']}] No sliq_links found, no events will be ingested."
+                        f"[{bill.type_number}] No sliq_links found, no events will be ingested."
                     )
 
                 hearing_data = {}
@@ -125,7 +146,7 @@ def get_events(
                 for link in sliq_links:
                     sliq_link = link["href"]
                     logging.info(
-                        f"[{bill_data['bill_type_number']}] Getting page from: {sliq_link}..."
+                        f"[{bill.type_number}] Getting page from: {sliq_link}..."
                     )
                     sliq_html = requests.get(sliq_link).text
 
@@ -140,7 +161,7 @@ def get_events(
 
                     if not last_link_added or is_video:
                         bill_action = bill_cells[0].text
-                        title = bill_data["bill_type_number"] + " - " + bill_action
+                        title = bill.type_number + " - " + bill_action
                         committee = bill_cells[-1].text.strip()
                         if not committee == "":
                             title += " - " + committee
@@ -167,10 +188,10 @@ def get_events(
                             ][0]
 
                             logging.debug(
-                                f"[{bill_data['bill_type_number']}] agendaId={agenda_id}, agenda_index={agenda_index}"
+                                f"[{bill.type_number}] agendaId={agenda_id}, agenda_index={agenda_index}"
                             )
                             logging.debug(
-                                f"[{bill_data['bill_type_number']}] event_info_json={event_info_json}"
+                                f"[{bill.type_number}] event_info_json={event_info_json}"
                             )
 
                             # the first agenda item in the tree might not contain a timestamp so we need to iterate
@@ -228,11 +249,11 @@ def get_events(
                             event_data.append(hearing_data)
                         else:
                             logging.info(
-                                f"[{bill_data['bill_type_number']}] agendaId not found in {sliq_link}, no events will be ingested."
+                                f"[{bill.type_number}] agendaId not found in {sliq_link}, no events will be ingested."
                             )
             else:
                 logging.info(
-                    f"[{bill_data['bill_type_number']}] No hearing in {from_dt} and {to_dt}, no events will be ingested."
+                    f"[{bill.type_number}] No hearing in {from_dt} and {to_dt}, no events will be ingested."
                 )
 
     def create_ingestion_model(e):
@@ -250,19 +271,19 @@ def get_events(
                 ],
                 external_source_id=e["external_source_id"],
             )
-        except Exception as exception:
-            logging.info(
-                "===================================================\n\n\n"
-                + "Got exception:\n\n {exception} \n\nFor this event:\n\n {e}\n\n\n"
-                + "==================================================="
+        except Exception as exc:
+            logging.warning(
+                f"Unable to format event data to EventIngestionModel from: {e}",
+                exc_info=exc,
             )
 
-    events = list(map(create_ingestion_model, event_data))
-
+    events = [
+        event for event in map(create_ingestion_model, event_data) if event is not None
+    ]
     logging.info(f"Found {len(events)} to be ingested.")
 
     for i, e in enumerate(events):
-        logging.info(e.to_json())
+        logging.info(f"{i}: {e.to_json(indent=2)}")
 
     return events
 
