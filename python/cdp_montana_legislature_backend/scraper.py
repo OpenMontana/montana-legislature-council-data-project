@@ -11,7 +11,7 @@ import requests
 import re
 import json
 
-from urllib.parse import urlparse, parse_qs, urljoin
+from urllib.parse import urlparse, parse_qs
 from cdp_backend.pipeline.ingestion_models import Body
 from cdp_backend.pipeline.ingestion_models import EventIngestionModel
 from cdp_backend.pipeline.ingestion_models import Session
@@ -29,7 +29,7 @@ class Bill:
     action_url_path: str
 
     def get_bill_actions_url(self) -> str:
-        return urljoin("http://laws.leg.mt.gov/legprd", self.action_url_path)
+        return f"http://laws.leg.mt.gov/legprd/{self.action_url_path}"
 
 
 def tag_to_bill(tag: Tag) -> Bill:
