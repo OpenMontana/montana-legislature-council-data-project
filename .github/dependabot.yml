@@ -23,6 +23,6 @@ updates:
     schedule:
       interval: "daily"
     allow:
-      - dependency-name: "@councildataproject/cdp-frontend"
+      - dependency-name: "@openmontana/cdp-frontend"
     commit-message:
       prefix: "ci(dependabot):"
