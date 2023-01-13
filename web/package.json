@@ -10,7 +10,7 @@
         "deploy": "gh-pages -d build"
     },
     "dependencies": {
-        "@councildataproject/cdp-frontend": "git://github.com/openmontana/cdp-frontend#main",
+        "@openmontana/cdp-frontend": "^3.1.4",
         "react": "^16.13.1",
         "react-dom": "^16.13.1"
     },
@@ -30,8 +30,5 @@
             "last 1 firefox version",
             "last 1 safari version"
         ]
-    },
-    "overrides": {
-        "@councildataproject/cdp-frontend": "git://github.com/openmontana/cdp-frontend#main"
     }
 }

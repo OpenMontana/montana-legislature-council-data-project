@@ -1,8 +1,8 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import { App, AppConfigProvider } from "@councildataproject/cdp-frontend";
+import { App, AppConfigProvider } from "@openmontana/cdp-frontend";
 
-import "@councildataproject/cdp-frontend/dist/index.css";
+import "@openmontana/cdp-frontend/dist/index.css";
 
 const config = {
     firebaseConfig: {
@@ -20,7 +20,6 @@ const config = {
 
 ReactDOM.render(
     <div>
-        {/**/}
         <AppConfigProvider appConfig={config}>
             <App />
         </AppConfigProvider>
