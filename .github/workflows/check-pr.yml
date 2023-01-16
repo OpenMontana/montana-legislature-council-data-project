@@ -17,8 +17,8 @@ jobs:
 
     - name: Install Packages
       run: |
-        sudo apt update
-        sudo apt-get install ffmpeg --fix-missing
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
 
     - name: Install Python Dependencies
       run: |
@@ -29,7 +29,7 @@ jobs:
         cd python/
         flake8 cdp_montana_legislature_backend --count --verbose --show-source --statistics
         black --check cdp_montana_legislature_backend --diff
-  
+
   build-web:
     runs-on: ubuntu-latest
 
