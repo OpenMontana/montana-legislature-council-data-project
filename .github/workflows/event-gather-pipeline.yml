@@ -32,8 +32,8 @@ jobs:
 
     - name: Install Packages
       run: |
-        sudo apt update
-        sudo apt-get install ffmpeg --fix-missing
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
 
     - name: Install Python Dependencies
       run: |
@@ -58,7 +58,7 @@ jobs:
       run: |
         cd python/
         run_cdp_event_gather event-gather-config.json --parallel
-    
+
     - name: Gather and Process Requested Events - Manual
       if: ${{ github.event_name == 'workflow_dispatch' }}
       run: |
