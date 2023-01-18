@@ -16,6 +16,7 @@ test_requirements = [
     "black>=19.10b0",
     "flake8>=3.8.3",
     "flake8-debugger>=3.2.1",
+    "betamax==0.8.1"
 ]
 
 dev_requirements = [
