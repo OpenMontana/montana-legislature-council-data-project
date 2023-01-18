@@ -32,15 +32,22 @@ class Bill:
         return f"http://laws.leg.mt.gov/legprd/{self.action_url_path}"
 
 
-def tag_to_bill(tag: Tag) -> Bill:
-    """Convert a Tag from each row in the LAWS search results bills table to a Bill."""
-    bill_link = tag.find_next("a")
+def row_to_bill(row: Tag) -> Bill:
+    """Convert a table row (as a Tag) in the LAWS search results bills table to a Bill."""
+
+    try:
+        assert row.name == "tr"
+    except AssertionError as e:
+        logging.error(f"Tag: {row} is not a table row!")
+        raise ValueError(e)
+
+    bill_link = row.find_next("a")
 
     if type(bill_link) is not Tag:
-        logging.error(f"Did not find an <a> in tag: {tag}!")
+        logging.error(f"Did not find an <a> in tag: {row}!")
         raise ValueError
 
-    # the inner HTML of the anchor tag contains the bill title, e.g. "HB-2"
+    # the inner HTML of the anchor tag contains the bill title, e.g. "HB 2"
     bill_type_number = bill_link.text
     # the href contains a relative path to the actions page for this bill, e.g.
     # LAW0210W$BSIV.ActionQuery?P_BILL_NO1=2&P_BLTP_BILL_TYP_CD=HB&Z_ACTION=Find&P_SESS=20231
@@ -48,18 +55,14 @@ def tag_to_bill(tag: Tag) -> Bill:
     bill_action_url_path = bill_link.attrs["href"]
     # the last <td> in this row contains a short description of the bill, e.g.
     # "General Appropriations Act"
-    short_title = tag.find_all("td")[-1].text
+    short_title = row.find_all("td")[-1].text
 
     bill = Bill(bill_type_number, short_title, bill_action_url_path)
     logging.debug(f"Found bill: {bill}.")
     return bill
 
 
-def get_bills(s: requests.Session, laws_root_url: str) -> List[Bill]:
-    logging.info(f"Loading bills from {laws_root_url}…")
-    laws_all_bills_html = BeautifulSoup(
-        s.get(laws_root_url).text, features="html.parser"
-    )
+def get_active_bills_rows(laws_all_bills_html: BeautifulSoup) -> List[Tag]:
     # The first table on the LAWS Bill Search Result page is in the header. The second table contains
     # the listing of the active bills.
     all_bills_table: Tag = laws_all_bills_html.find_all("table")[1]
@@ -67,7 +70,16 @@ def get_bills(s: requests.Session, laws_root_url: str) -> List[Bill]:
     # which contains the column headers.
     all_bills_table_rows: List[Tag] = all_bills_table.find_all("tr")[1:]
     logging.debug(f"Found {len(all_bills_table_rows)} bills.")
-    return [tag_to_bill(t) for t in all_bills_table_rows]
+    return all_bills_table_rows
+
+
+def get_laws_all_bills_html(s: requests.Session, laws_root_url: str) -> BeautifulSoup:
+    """Starting from the root url, request the page and hand-off to BeautifulSoup for parsing."""
+    logging.info(f"Loading bills from {laws_root_url}…")
+    laws_all_bills_html = BeautifulSoup(
+        s.get(laws_root_url).text, features="html.parser"
+    )
+    return laws_all_bills_html
 
 
 def get_events(
@@ -92,7 +104,7 @@ def get_events(
 
     Notes
     -----
-    As the implimenter of the get_events function, you can choose to ignore
+    As the implementer of the get_events function, you can choose to ignore
     the from_dt and to_dt parameters. However, they are useful for manually
     kicking off pipelines from GitHub Actions UI.
     """
@@ -100,7 +112,9 @@ def get_events(
     logging.info("Starting MT Legislature Scraper.")
 
     with requests.Session() as s:
-        bills = get_bills(s, LAWS_2023_ROOT_URL)
+        laws_all_bills_html = get_laws_all_bills_html(s, LAWS_2023_ROOT_URL)
+        active_bill_rows = get_active_bills_rows(laws_all_bills_html)
+        bills = [row_to_bill(t) for t in active_bill_rows]
 
     event_data = []
     # Go to each LAWS bill URL and find bill actions that have associated recordings.
