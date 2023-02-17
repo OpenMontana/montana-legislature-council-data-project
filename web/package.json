@@ -10,7 +10,7 @@
         "deploy": "gh-pages -d build"
     },
     "dependencies": {
-        "@openmontana/cdp-frontend": "^3.1.7",
+        "@openmontana/cdp-frontend": "^3.1.8",
         "react": "^16.13.1",
         "react-dom": "^16.13.1"
     },
