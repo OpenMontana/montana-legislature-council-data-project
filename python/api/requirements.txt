@@ -1,2 +1,2 @@
 functions-framework==3.*
-cdp-backend==4.0.3
+cdp-backend==4.0.5
