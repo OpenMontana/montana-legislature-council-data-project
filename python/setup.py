@@ -6,7 +6,7 @@
 from setuptools import find_packages, setup
 
 requirements = [
-    "cdp-backend[pipeline]==4.0.8",
+    "cdp-backend[pipeline]==4.0.9",
     "beautifulsoup4",
     "requests",
     "python-dateutil"
@@ -41,6 +41,7 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Natural Language :: English",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
     ],
     description="Package containing the gather functions for Example.",
     install_requires=requirements,

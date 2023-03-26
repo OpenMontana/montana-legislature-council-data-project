@@ -40,12 +40,15 @@ jobs:
             --cloud-region=us-central1-f \
             --cloud-type=n1-standard-4 \
             --cloud-gpu=nvidia-tesla-t4 \
-            --cloud-hdd-size=128 \
+            --cloud-hdd-size=64 \
             --idle-timeout=600
 
   process-events:
     needs: [deploy-runner-on-gcp]
     runs-on: [self-hosted, gcp-cdp-runner]
+    container:
+      image: ghcr.io/iterative/cml:0-dvc2-base1-gpu
+      options: --gpus all
 
     steps:
     - uses: actions/checkout@v3
@@ -53,9 +56,13 @@ jobs:
       with:
         python-version: '3.11'
 
+    - name: Check GPU Drivers
+      run: |
+        nvidia-smi
+
     - name: Install Packages
       run: |
-        sudo apt-get update
+        sudo apt update
         sudo apt-get install -y --no-install-recommends \
           libsndfile1 \
           ffmpeg
@@ -63,8 +70,8 @@ jobs:
     - name: Install Python Dependencies
       run: |
         cd python/
+        pip install --upgrade pip
         pip install .
-        pip install 'faster-whisper @ git+https://github.com/guillaumekln/faster-whisper.git'
 
     - name: Setup gcloud
       uses: google-github-actions/setup-gcloud@v0
@@ -74,10 +81,11 @@ jobs:
         export_default_credentials: true
 
     - name: Dump Credentials to JSON
-      run: |
-        echo "$GOOGLE_CREDS" > python/google-creds.json
-      env:
-        GOOGLE_CREDS: ${{ secrets.GOOGLE_CREDENTIALS }}
+      uses: jsdaniell/create-json@v1.2.2
+      with:
+        name: "google-creds.json"
+        json: ${{ secrets.GOOGLE_CREDENTIALS }}
+        dir: "python/"
 
     - name: Gather and Process New Events - CRON
       if: ${{ github.event_name == 'schedule' }}

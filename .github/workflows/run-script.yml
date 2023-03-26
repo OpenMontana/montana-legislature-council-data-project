@@ -22,8 +22,8 @@ jobs:
 
     - name: Install Packages
       run: |
-        sudo apt-get update
-        sudo apt-get install -y ffmpeg
+        sudo apt update
+        sudo apt-get install ffmpeg --fix-missing
 
     - name: Install Python Dependencies
       run: |
@@ -38,11 +38,12 @@ jobs:
         export_default_credentials: true
 
     - name: Dump Credentials to JSON
-      run: |
-        echo "$GOOGLE_CREDS" > python/google-creds.json
-      env:
-        GOOGLE_CREDS: ${{ secrets.GOOGLE_CREDENTIALS }}
-
+      uses: jsdaniell/create-json@v1.2.2
+      with:
+        name: "google-creds.json"
+        json: ${{ secrets.GOOGLE_CREDENTIALS }}
+        dir: "python/"
+    
     - name: Run Command
       if: ${{ github.event_name == 'workflow_dispatch' }}
       run: |
