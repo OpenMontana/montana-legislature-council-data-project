@@ -35,7 +35,7 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS_DATA: ${{ secrets.GOOGLE_CREDENTIALS }}
         with:
           timeout_minutes: 16
-          max_attempts: 7
+          max_attempts: 128
           retry_wait_seconds: 60
           command: |
             cml runner \
