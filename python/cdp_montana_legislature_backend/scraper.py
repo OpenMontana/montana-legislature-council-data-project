@@ -201,6 +201,9 @@ def get_events(
                                 for i, d in enumerate(event_info_json)
                                 if agenda_id in d.values()
                             ]
+                            # Even when agendaId is present in the query params it might not be present
+                            # in the AgendaTree parsed from the SLIQ page. In that case, we will skip over
+                            # this bill row since we don't know a time-range to constrain the transcript generation
                             if len(agenda_indices) > 0:
                                 agenda_index = agenda_indices[0]
                             else:
