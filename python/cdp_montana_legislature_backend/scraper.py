@@ -207,7 +207,9 @@ def get_events(
                             if len(agenda_indices) > 0:
                                 agenda_index = agenda_indices[0]
                             else:
-                                logging.warn(f"agenda_id: {agenda_id} not found in AgendaTree from url: {sliq_link}.")
+                                logging.warn(
+                                    f"agenda_id: {agenda_id} not found in AgendaTree from url: {sliq_link}."
+                                )
                                 continue
 
                             logging.debug(
