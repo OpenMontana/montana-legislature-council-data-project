@@ -196,11 +196,16 @@ def get_events(
                         # we will continue to try to scrape this video again until there are timestamps.
                         if "agendaId" in parse_qs(parsed_url.query):
                             agenda_id = "A" + parse_qs(parsed_url.query)["agendaId"][0]
-                            agenda_index = [
+                            agenda_indices = [
                                 i
                                 for i, d in enumerate(event_info_json)
                                 if agenda_id in d.values()
-                            ][0]
+                            ]
+                            if len(agenda_indices) > 0:
+                                agenda_index = agenda_indices[0]
+                            else:
+                                logging.warn(f"agenda_id: {agenda_id} not found in AgendaTree from url: {sliq_link}.")
+                                continue
 
                             logging.debug(
                                 f"[{bill.type_number}] agendaId={agenda_id}, agenda_index={agenda_index}"
