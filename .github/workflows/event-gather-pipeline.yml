@@ -1,10 +1,10 @@
 name: Event Gather
 
 on:
-  schedule:
+  #schedule:
     # <minute [0,59]> <hour [0,23]> <day of the month [1,31]> <month of the year [1,12]> <day of the week [0,6]>
     # https://pubs.opengroup.org/onlinepubs/9699919799/utilities/crontab.html#tag_20_25_07
-    - cron: '26 0 * * *'
+    #- cron: '26 0 * * *'
   workflow_dispatch:
     inputs:
       from:
@@ -94,12 +94,14 @@ jobs:
 
     - name: Gather and Process New Events - CRON
       if: ${{ github.event_name == 'schedule' }}
+      timeout-minutes: 1440
       run: |
         cd python/
         run_cdp_event_gather event-gather-config.json
 
     - name: Gather and Process Requested Events - Manual
       if: ${{ github.event_name == 'workflow_dispatch' }}
+      timeout-minutes: 1440
       run: |
         cd python/
         run_cdp_event_gather event-gather-config.json \
