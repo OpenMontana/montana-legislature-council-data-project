@@ -51,6 +51,9 @@ jobs:
   process-events:
     needs: [deploy-runner-on-gcp]
     runs-on: [self-hosted, gcp-cdp-runner]
+    # There can be as many as ~200 events to ingest per day in the MT State Legislature session
+    # so we need more than 6h of run time.
+    timeout-minutes: 1440
     container:
       image: ghcr.io/iterative/cml:0-dvc2-base1-gpu
       options: --gpus all
@@ -94,14 +97,12 @@ jobs:
 
     - name: Gather and Process New Events - CRON
       if: ${{ github.event_name == 'schedule' }}
-      timeout-minutes: 1440
       run: |
         cd python/
         run_cdp_event_gather event-gather-config.json
 
     - name: Gather and Process Requested Events - Manual
       if: ${{ github.event_name == 'workflow_dispatch' }}
-      timeout-minutes: 1440
       run: |
         cd python/
         run_cdp_event_gather event-gather-config.json \
