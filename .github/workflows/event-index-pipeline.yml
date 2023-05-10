@@ -18,11 +18,13 @@ on:
 
 jobs:
   generate-index-chunks:
+    timeout-minutes: 1440
     runs-on: ubuntu-latest
     strategy:
       matrix:
         n-gram: [1, 2, 3]
       fail-fast: false
+
 
     outputs:
       ngram-1-chunks: ${{ steps.output-index-chunks.outputs.ngram-1-chunks }}
