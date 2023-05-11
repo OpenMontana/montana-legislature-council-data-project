@@ -1,0 +1,110 @@
+name: Event Gather
+
+on:
+  #schedule:
+    # <minute [0,59]> <hour [0,23]> <day of the month [1,31]> <month of the year [1,12]> <day of the week [0,6]>
+    # https://pubs.opengroup.org/onlinepubs/9699919799/utilities/crontab.html#tag_20_25_07
+    #- cron: '26 0 * * *'
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "Optional ISO formatted string for datetime to begin event gather from."
+        required: false
+        default: ""  # Will get converted to N (default 2) days prior
+      to:
+        description: "Optional ISO formatted string for datetime to end event gather at."
+        required: false
+        default: ""  # Will get converted to now
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  deploy-runner-on-gcp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup CML
+        uses: iterative/setup-cml@v1
+      - name: Create Runner
+        uses: nick-fields/retry@v2
+        env:
+          REPO_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          GOOGLE_APPLICATION_CREDENTIALS_DATA: ${{ secrets.GOOGLE_CREDENTIALS }}
+        with:
+          timeout_minutes: 16
+          max_attempts: 36
+          retry_wait_seconds: 600
+          command: |
+            cml runner \
+              --single \
+              --labels=gcp-cdp-runner-3 \
+              --cloud=gcp \
+              --cloud-region=us-central1-f \
+              --cloud-type=n1-standard-4 \
+              --cloud-gpu=nvidia-tesla-t4 \
+              --cloud-hdd-size=64 \
+              --idle-timeout=600
+
+  process-events:
+    needs: [deploy-runner-on-gcp]
+    runs-on: [self-hosted, gcp-cdp-runner-3]
+    # There can be as many as ~200 events to ingest per day in the MT State Legislature session
+    # so we need more than 6h of run time.
+    timeout-minutes: 1440
+    container:
+      image: ghcr.io/iterative/cml:0-dvc2-base1-gpu
+      options: --gpus all
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Check GPU Drivers
+      run: |
+        nvidia-smi
+
+    - name: Install Packages
+      run: |
+        sudo apt update
+        sudo apt-get install -y --no-install-recommends \
+          libsndfile1 \
+          ffmpeg
+
+    - name: Install Python Dependencies
+      run: |
+        cd python/
+        pip install --upgrade pip
+        pip install .
+
+    - name: Setup gcloud
+      uses: google-github-actions/setup-gcloud@v0
+      with:
+        project_id: cdp-montana-legislature
+        service_account_key: ${{ secrets.GOOGLE_CREDENTIALS }}
+        export_default_credentials: true
+
+    - name: Dump Credentials to JSON
+      uses: jsdaniell/create-json@v1.2.2
+      with:
+        name: "google-creds.json"
+        json: ${{ secrets.GOOGLE_CREDENTIALS }}
+        dir: "python/"
+
+    - name: Gather and Process New Events - CRON
+      if: ${{ github.event_name == 'schedule' }}
+      run: |
+        cd python/
+        run_cdp_event_gather event-gather-config.json
+
+    - name: Gather and Process Requested Events - Manual
+      if: ${{ github.event_name == 'workflow_dispatch' }}
+      run: |
+        cd python/
+        run_cdp_event_gather event-gather-config.json \
+          --from ${{ github.event.inputs.from }} \
+          --to ${{ github.event.inputs.to }}
