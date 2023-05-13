@@ -18,7 +18,7 @@ from cdp_backend.pipeline.ingestion_models import Session
 
 # MT Legislature 2023 Regular Session
 LAWS_2023_ROOT_URL = (
-    "http://laws.leg.mt.gov/legprd/LAW0217W$BAIV.return_all_bills?P_SESS=20231"
+    "https://laws.leg.mt.gov/legprd/LAW0217W$BAIV.return_all_bills?P_SESS=20231"
 )
 
 
@@ -29,7 +29,7 @@ class Bill:
     action_url_path: str
 
     def get_bill_actions_url(self) -> str:
-        return f"http://laws.leg.mt.gov/legprd/{self.action_url_path}"
+        return f"https://laws.leg.mt.gov/legprd/{self.action_url_path}"
 
 
 def row_to_bill(row: Tag) -> Bill:
