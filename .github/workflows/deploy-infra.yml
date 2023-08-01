@@ -4,12 +4,6 @@ on:
   push:
     branches:
       - main
-  schedule:
-    # <minute [0,59]> <hour [0,23]> <day of the month [1,31]> <month of the year [1,12]> <day of the week [0,6]>
-    # https://pubs.opengroup.org/onlinepubs/9699919799/utilities/crontab.html#tag_20_25_07
-    # Run every Monday at 23:26:00 UTC (Monday at 15:26:00 PST)
-    # We offset from the hour and half hour to go easy on the servers :)
-    - cron: '26 23 * * 1'
 
 jobs:
   deploy-infra:
@@ -33,7 +27,7 @@ jobs:
     - name: Install Dependencies
       run: |
         pip install -r infra/requirements.txt
-    
+
     # Setup gcloud
     - uses: 'google-github-actions/auth@v0'
       with:
@@ -45,7 +39,7 @@ jobs:
     - name: Copy and Generate Infrastructure Files
       run: |
         get_cdp_infrastructure_stack infrastructure
-    
+
     # Run infrastructure deploy
     - name: Run Infrastructure Deploy
       run: |
@@ -59,7 +53,7 @@ jobs:
         FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
-    # Clipping Fill -- 
+    # Clipping Fill --
     ## Enabled
     # - name: Run Clipping Deploy
     #   run: |

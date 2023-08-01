@@ -1,9 +1,6 @@
 name: Run Command
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       command-and-args:
@@ -43,7 +40,7 @@ jobs:
         name: "google-creds.json"
         json: ${{ secrets.GOOGLE_CREDENTIALS }}
         dir: "python/"
-    
+
     - name: Run Command
       if: ${{ github.event_name == 'workflow_dispatch' }}
       run: |
